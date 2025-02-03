@@ -10,11 +10,47 @@ include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pi
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_trimscreen_pipeline'
 
+include { BBMAP_BBDUK                                               } from '../modules/nf-core/bbmap/bbduk/main'
+include { BLAST_BLASTN                                              } from '../modules/nf-core/blast/blastn/main'
+include { BLAST_MAKEBLASTDB                                         } from '../modules/nf-core/blast/makeblastdb/main'
+
+include { ISOLATE_BBDUK_IDS                                         } from '../modules/detaxizer/isolate_bbduk_ids'
+include { MERGE_IDS                                                 } from '../modules/detaxizer/merge_ids'
+include { RENAME_FASTQ_HEADERS_PRE                                  } from '../modules/detaxizer/rename_fastq_headers_pre'
+include { PREPARE_FASTA4BLASTN                                      } from '../modules/detaxizer/prepare_fasta4blastn'
+include { FILTER_BLASTN_IDENTCOV                                    } from '../modules/detaxizer/filter_blastn_identcov'
+include { FILTER                                                    } from '../modules/detaxizer/filter'
+include { RENAME_FASTQ_HEADERS_AFTER                                } from '../modules/detaxizer/rename_fastq_headers_after'
+include { SUMMARY_CLASSIFICATION                                    } from '../modules/detaxizer/summary_classification'
+include { SUMMARY_BLASTN                                            } from '../modules/detaxizer/summary_blastn'
+include { SUMMARIZER                                                } from '../modules/detaxizer/summarizer'
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+
+// specify the ch_fasta_blastn channel if it is not provided via --fasta_blastn
+def ch_fasta_blastn = Channel.empty()
+
+if ( !params.fasta_blastn && params.validation_blastn ) {
+    ch_fasta_blastn = Channel.fromPath(getGenomeAttribute('fasta'))
+} else if ( params.validation_blastn ){
+    // If params.fasta_blastn is there, use it for the creation of the blastn database
+    ch_fasta_blastn = Channel.fromPath(params.fasta_blastn)
+}
+
+// specify the ch_fasta_bbduk channel if it is not provided via --fasta_bbduk
+
+def ch_fasta_bbduk = Channel.empty()
+
+if ( !params.fasta_bbduk && params.classification_bbduk ) {
+    ch_fasta_bbduk = Channel.fromPath(getGenomeAttribute('fasta'))
+} else if ( params.classification_bbduk ){
+    // If params.fasta_bbduk is there, use it for the creation of the blastn database
+    ch_fasta_bbduk = Channel.fromPath(params.fasta_bbduk)
+}
 
 workflow TRIMSCREEN {
 
@@ -24,14 +60,217 @@ workflow TRIMSCREEN {
 
     ch_versions = Channel.empty()
     ch_multiqc_files = Channel.empty()
+    
+    ch_short = ch_samplesheet.branch {
+        shortReads: it[1]
+        }.shortReads.map{
+        meta, short_reads_fastq_1, short_reads_fastq_2, long_reads_fastq_1 ->
+            if (short_reads_fastq_2){
+                return [meta + [ single_end: false, long_reads: false , amount_of_files: 2 ], [ short_reads_fastq_1, short_reads_fastq_2 ] ]
+            } else {
+                return [meta + [ id: "${meta.id}_R1", single_end: true, long_reads: false, amount_of_files: 1 ], short_reads_fastq_1 ]
+            }
+    }
+
+    ch_long = ch_samplesheet.branch {
+        longReads: it[3]
+    }.longReads.map {
+        meta, short_reads_fastq_1, short_reads_fastq_2, long_reads_fastq_1 ->
+            return [meta + [ id: "${meta.id}_longReads", single_end: true, long_reads: true, amount_of_files: 1 ], long_reads_fastq_1 ]
+    }
+
+    ch_short_long = ch_short.mix(ch_long)
+
+    //
+    // MODULE: Rename Fastq headers
+    //
+    RENAME_FASTQ_HEADERS_PRE(ch_short_long)
+
     //
     // MODULE: Run FastQC
     //
     FASTQC (
-        ch_samplesheet
+        RENAME_FASTQ_HEADERS_PRE.out.fastq
     )
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
     ch_versions = ch_versions.mix(FASTQC.out.versions.first())
+
+    //
+    // MODULE: Run fastp
+    //
+    if (params.preprocessing) {
+
+    FASTP (
+        RENAME_FASTQ_HEADERS_PRE.out.fastq,
+        [],
+        [],
+        params.fastp_save_trimmed_fail,
+        []
+    )
+
+    ch_fastq_for_classification = FASTP.out.reads
+    ch_versions = ch_versions.mix(FASTP.out.versions.first())
+    } else {
+        ch_fastq_for_classification = RENAME_FASTQ_HEADERS_PRE.out.fastq
+    }
+
+
+
+    //////////////////////////////////////////////////
+    //  Classification
+    //////////////////////////////////////////////////
+
+
+    //
+    // MODULE: Run bbduk
+    //
+    BBMAP_BBDUK (
+        ch_fastq_for_classification,
+        ch_fasta_bbduk.first()
+    )
+    ch_versions = ch_versions.mix(BBMAP_BBDUK.out.versions.first())
+
+    //
+    // MODULE: Run ISOLATE_BBDUK_IDS
+    //
+    ISOLATE_BBDUK_IDS(
+        BBMAP_BBDUK.out.contaminated_reads
+    )
+    ch_versions = ch_versions.mix(ISOLATE_BBDUK_IDS.out.versions.first())
+
+
+
+
+    //
+    // MODULE: Merge IDs
+    //
+    MERGE_IDS(
+        ISOLATE_BBDUK_IDS.out.classified_ids
+    )
+
+    ch_versions = ch_versions.mix(MERGE_IDS.out.versions.first())
+
+    //
+    // MODULE: Summarize the classification results
+    //
+
+    SUMMARY_CLASSIFICATION(
+        MERGE_IDS.out.classified_ids
+    )
+
+    // Drop meta of kraken2_summary as it is not needed for the combination step of summarizer
+    ch_classification_summary = SUMMARY_CLASSIFICATION.out.summary.map {
+            meta, path -> [path]
+    }
+    ch_versions = ch_versions.mix(SUMMARY_CLASSIFICATION.out.versions.first())
+
+
+
+    //
+    // MODULE: Filter out the classified or validated reads
+    //
+    if (( !params.validation_blastn && params.enable_filter ) || params.filter_with_classification) {
+
+        ch_classification = RENAME_FASTQ_HEADERS_PRE.out.fastq
+            .join(MERGE_IDS.out.classified_ids, by:[0])
+
+        FILTER(
+            ch_classification
+        )
+
+        ch_versions = ch_versions.mix(FILTER.out.versions.first())
+
+    } else if ( params.enable_filter ) {
+
+        ch_blastn2filter = FILTER_BLASTN_IDENTCOV.out.classified_ids.map {
+            meta, path ->
+                return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
+        }
+        .map{
+            meta, path -> tuple(groupKey(meta, meta.amount_of_files), path)
+        }
+        .groupTuple(by:[0])
+
+        ch_combined_short_long_id = RENAME_FASTQ_HEADERS_PRE.out.fastq.map {
+            meta, path ->
+                return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
+        }
+
+        ch_blastnfilter = ch_combined_short_long_id.join(
+            ch_blastn2filter, by:[0]
+        )
+
+        FILTER(
+            ch_blastnfilter
+        )
+
+        ch_versions = ch_versions.mix(FILTER.out.versions.first())
+    
+    }
+
+    //
+    // MODULE: Rename headers after filtering
+    //
+    if ( params.enable_filter ) {
+
+    ch_headers = RENAME_FASTQ_HEADERS_PRE.out.headers.map {
+        meta, path ->
+            return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
+    }
+
+    ch_filtered2rename = FILTER.out.filtered.map {
+        meta, path ->
+            return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
+    }
+
+    ch_removed2rename = Channel.empty()
+
+    ch_rename_filtered = ch_filtered2rename.join(ch_headers, by:[0])
+
+    ch_removed2rename = ch_removed2rename.ifEmpty(['empty', []])
+
+
+    RENAME_FASTQ_HEADERS_AFTER(
+        ch_rename_filtered,
+        ch_removed2rename.first()
+    )
+
+    ch_versions = ch_versions.mix(RENAME_FASTQ_HEADERS_AFTER.out.versions.first())
+
+    }
+
+
+
+    //
+    // MODULE: Summarize the classification process
+    //
+    if (params.validation_blastn){
+
+    ch_summary = ch_classification_summary.mix(ch_blastn_summary).collect().map {
+            item -> [['id': "summary_of_classification_and_blastn"], item]
+        }
+
+    } else {
+
+        ch_summary = ch_classification_summary.collect().map {
+            item -> [['id': "summary_of_classification"], item]
+        }
+
+    }
+
+    ch_summary = SUMMARIZER (
+        ch_summary
+    )
+
+    ch_versions = ch_versions.mix(ch_summary.versions)
+
+
+
+    if ( params.generate_downstream_samplesheets ) {
+
+        GENERATE_DOWNSTREAM_SAMPLESHEETS ( RENAME_FASTQ_HEADERS_AFTER.out.fastq )
+
+    }
 
     //
     // Collate and save software versions
@@ -39,56 +278,20 @@ workflow TRIMSCREEN {
     softwareVersionsToYAML(ch_versions)
         .collectFile(
             storeDir: "${params.outdir}/pipeline_info",
-            name:  'trimscreen_software_'  + 'mqc_'  + 'versions.yml',
+            name: 'nf_core_'  + 'pipeline_software_' +  'mqc_'  + 'versions.yml',
             sort: true,
             newLine: true
         ).set { ch_collated_versions }
 
 
-    //
-    // MODULE: MultiQC
-    //
-    ch_multiqc_config        = Channel.fromPath(
-        "$projectDir/assets/multiqc_config.yml", checkIfExists: true)
-    ch_multiqc_custom_config = params.multiqc_config ?
-        Channel.fromPath(params.multiqc_config, checkIfExists: true) :
-        Channel.empty()
-    ch_multiqc_logo          = params.multiqc_logo ?
-        Channel.fromPath(params.multiqc_logo, checkIfExists: true) :
-        Channel.empty()
-
-    summary_params      = paramsSummaryMap(
-        workflow, parameters_schema: "nextflow_schema.json")
-    ch_workflow_summary = Channel.value(paramsSummaryMultiqc(summary_params))
-    ch_multiqc_files = ch_multiqc_files.mix(
-        ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
-    ch_multiqc_custom_methods_description = params.multiqc_methods_description ?
-        file(params.multiqc_methods_description, checkIfExists: true) :
-        file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
-    ch_methods_description                = Channel.value(
-        methodsDescriptionText(ch_multiqc_custom_methods_description))
-
-    ch_multiqc_files = ch_multiqc_files.mix(ch_collated_versions)
-    ch_multiqc_files = ch_multiqc_files.mix(
-        ch_methods_description.collectFile(
-            name: 'methods_description_mqc.yaml',
-            sort: true
-        )
-    )
-
-    MULTIQC (
-        ch_multiqc_files.collect(),
-        ch_multiqc_config.toList(),
-        ch_multiqc_custom_config.toList(),
-        ch_multiqc_logo.toList(),
-        [],
-        []
-    )
-
-    emit:multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
-    versions       = ch_versions                 // channel: [ path(versions.yml) ]
-
 }
+
+
+
+
+
+
+
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
