@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://raw.githubusercontent.com/donertas-group/trimscreen/master/nextflow_schema.json",
-    "title": "donertas-group/trimscreen pipeline parameters",
-    "description": "Screen trimming parameters for amplicon dataset and find the best parameters that optimize taxonomic diversity",
+    "$id": "https://raw.githubusercontent.com/nf-core/detaxizer/master/nextflow_schema.json",
+    "title": "nf-core/detaxizer pipeline parameters",
+    "description": "A pipeline to identify (and remove) certain sequences from raw genomic data. Default taxon to identify (and remove) is Homo sapiens. Removal is optional.",
     "type": "object",
     "$defs": {
         "input_output_options": {
@@ -20,7 +20,7 @@
                     "mimetype": "text/csv",
                     "pattern": "^\\S+\\.csv$",
                     "description": "Path to comma-separated file containing information about the samples in the experiment.",
-                    "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row.",
+                    "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row. See [usage docs](https://nf-co.re/detaxizer/usage#samplesheet-input).",
                     "fa_icon": "fas fa-file-csv"
                 },
                 "outdir": {
@@ -43,6 +43,210 @@
                 }
             }
         },
+        "general_workflow_parameters": {
+            "title": "General workflow parameters",
+            "type": "object",
+            "description": "Parameters which enable/disable certain steps used in the workflow.",
+            "default": "",
+            "properties": {
+                "preprocessing": {
+                    "type": "boolean",
+                    "description": "If preprocessing with fastp should be turned on."
+                },
+                "classification_bbduk": {
+                    "type": "boolean",
+                    "description": "Signifies that bbduk is used in the classification process. Can be combined with the 'classification_kraken2' parameter to run both."
+                },
+                "classification_kraken2": {
+                    "type": "boolean",
+                    "description": "Signifies that kraken2 is used in the classification process. Can be combined with the 'classification_bbduk' parameter to run both. For kraken2 alone no parameter is needed."
+                },
+                "validation_blastn": {
+                    "type": "boolean",
+                    "description": "If a validation of the classified reads via blastn should be carried out."
+                },
+                "classification_kraken2_post_filtering": {
+                    "type": "boolean",
+                    "description": "If the filtered reads should be classified with kraken2."
+                },
+                "filter_with_classification": {
+                    "type": "boolean",
+                    "description": "When a validation via blastn is wanted but the filtering should use the IDs from the classification process."
+                },
+                "enable_filter": {
+                    "type": "boolean",
+                    "description": "If the filtering step should be carried out.",
+                    "help_text": "If set to `True` the filter is used. Otherwise only assessing is performed."
+                },
+                "output_removed_reads": {
+                    "type": "boolean",
+                    "description": "If the removed reads should also be written to the output folder."
+                },
+                "filter_trimmed": {
+                    "type": "boolean",
+                    "description": "If the pre-processed reads should be used by the filter.",
+                    "help_text": "If set to `True` the the pre-proccesed reads are used for filtering. Else the raw reads are used."
+                },
+                "save_intermediates": {
+                    "type": "boolean",
+                    "description": "Save intermediates to the results folder.",
+                    "help_text": "Set this parameter to `True` if you want to publish the intermediate files to the results folder."
+                }
+            },
+            "fa_icon": "fas fa-angle-double-right"
+        },
+        "bbduk": {
+            "title": "bbduk",
+            "type": "object",
+            "description": "Parameter to customize bbduk execution",
+            "default": "",
+            "properties": {
+                "fasta_bbduk": {
+                    "type": "string",
+                    "description": "Location of the fasta which contains the contaminant sequences."
+                },
+                "bbduk_kmers": {
+                    "type": "integer",
+                    "default": 27,
+                    "description": "Length of k-mers for classification carried out by bbduk"
+                }
+            }
+        },
+        "kraken2": {
+            "title": "kraken2",
+            "type": "object",
+            "description": "Parameters used by kraken2 to classify all reads provided. Fine-tuning of the isolation step can be done via the `cutoff_*` parameters.",
+            "default": "",
+            "properties": {
+                "kraken2db": {
+                    "type": "string",
+                    "default": "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_08gb_20240904.tar.gz",
+                    "help_text": "For input how to use this parameter to fine-tune the step see the kraken2 section in the [usage documentation](https://nf-co.re/detaxizer/docs/usage#kraken2)",
+                    "description": "The database which is used in the classification step."
+                },
+                "save_output_fastqs": {
+                    "type": "boolean",
+                    "description": "Save unclassified reads and classified reads (those assigned to any taxon, not specifically assessed or filtered) to separate files.",
+                    "hidden": true
+                },
+                "save_output_fastqs_filtered": {
+                    "type": "boolean",
+                    "description": "Save unclassified reads and classified reads (those assigned to any taxon, not specifically assessed or filtered) to separate files. For the filtered reads."
+                },
+                "save_output_fastqs_removed": {
+                    "type": "boolean",
+                    "description": "Save unclassified reads and classified reads (those assigned to any taxon, not specifically assessed or filtered) to separate files. For the removed reads."
+                },
+                "kraken2confidence": {
+                    "type": "number",
+                    "default": 0.0,
+                    "description": "Confidence in the classification of a read as a certain taxon.",
+                    "help_text": "Refer to https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#confidence-scoring for details."
+                },
+                "kraken2confidence_filtered": {
+                    "type": "number",
+                    "default": 0.0,
+                    "description": "Confidence in the classification of a read as a certain taxon. For the filtered reads."
+                },
+                "kraken2confidence_removed": {
+                    "type": "number",
+                    "default": 0.0,
+                    "description": "Confidence in the classification of a read as a certain taxon. For the removed reads."
+                },
+                "cutoff_tax2filter": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "If a read has less k-mers assigned to the taxon/taxa to be assessed/to be filtered the read is ignored by the pipeline."
+                },
+                "cutoff_tax2keep": {
+                    "type": "number",
+                    "default": 0.0,
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Ratio per read of assigned to tax2filter k-mers to k-mers assigned to any other taxon (except unclassified).",
+                    "help_text": "If the ratio of the sum of k-mers mapped to the taxon/taxa to be assessed/to be filtered to (sum(to keep)+sum(to filter/assess)) is below this threshold the read is ignored by the pipeline. Can take values between 0.0 and 1.0."
+                },
+                "cutoff_unclassified": {
+                    "type": "number",
+                    "default": 0.0,
+                    "description": "Ratio per read of assigned to tax2filter k-mers to unclassified k-mers.",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "help_text": "If the ratio of the sum of k-mers mapped to the taxon/taxa to be assessed/to be filtered to (unclassified+sum(to filter/assess)) is below this threshold the read is ignored by the pipeline. Can take values between 0.0 and 1.0."
+                },
+                "tax2filter": {
+                    "type": "string",
+                    "default": "Homo sapiens",
+                    "description": "The taxon or taxonomic group to be assessed or filtered by the pipeline.",
+                    "help_text": "If a whole taxonomic group should be assessed/filtered use the highest taxonomic name in the hierarchy. E.g. if you want to assess for/filter out the whole taxonomic subtree from Mammalia onward provide this parameter with the string 'Mammalia'."
+                }
+            },
+            "fa_icon": "fas fa-search-location"
+        },
+        "blastn": {
+            "title": "blastn",
+            "type": "object",
+            "description": "Parameters to fine-tune the output of blastn.",
+            "default": "",
+            "properties": {
+                "fasta_blastn": {
+                    "type": "string",
+                    "description": "Location of the fasta from which the blastn database will be constructed."
+                },
+                "blast_coverage": {
+                    "type": "number",
+                    "default": 40.0,
+                    "description": "Coverage is the percentage of the query sequence which can be found in the alignments of the sequence match. It can be used to fine-tune the validation step."
+                },
+                "blast_evalue": {
+                    "type": "number",
+                    "default": 0.01,
+                    "description": "The expected(e)-value contains information on how many hits of the same score can be found in a database of the size used in the query by chance. The parameter can be used to fine-tune the validation step."
+                },
+                "blast_identity": {
+                    "type": "number",
+                    "default": 40.0,
+                    "description": "Identity is the percentage of the exact matches in the query and the sequence found in the database. The parameter can be used to fine-tune the validation step."
+                }
+            },
+            "fa_icon": "fas fa-search-location"
+        },
+        "fastp_options": {
+            "title": "fastp options",
+            "type": "object",
+            "description": "Options to control the behavior of fastp",
+            "default": "",
+            "properties": {
+                "reads_minlength": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "fastp option defining the minimum readlength of a read"
+                },
+                "fastp_save_trimmed_fail": {
+                    "type": "boolean",
+                    "description": "fastp option defining if the reads which failed to be trimmed should be saved"
+                },
+                "fastp_qualified_quality": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "fastp option to define the threshold of quality of an individual base"
+                },
+                "fastp_cut_mean_quality": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "fastp option to define the mean quality for trimming"
+                },
+                "fastp_eval_duplication": {
+                    "type": "boolean",
+                    "description": "fastp option if duplicates should be filtered or not before classification"
+                },
+                "save_clipped_reads": {
+                    "type": "boolean",
+                    "description": "fastp option to define if the clipped reads should be saved"
+                }
+            },
+            "fa_icon": "fas fa-cut"
+        },
         "reference_genome_options": {
             "title": "Reference genome options",
             "type": "object",
@@ -53,17 +257,8 @@
                     "type": "string",
                     "description": "Name of iGenomes reference.",
                     "fa_icon": "fas fa-book",
-                    "help_text": "If using a reference genome configured in the pipeline using iGenomes, use this parameter to give the ID for the reference. This is then used to build the full paths for all required reference genome files e.g. `--genome GRCh38`. \n\nSee the [nf-core website docs](https://nf-co.re/usage/reference_genomes) for more details."
-                },
-                "fasta": {
-                    "type": "string",
-                    "format": "file-path",
-                    "exists": true,
-                    "mimetype": "text/plain",
-                    "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
-                    "description": "Path to FASTA genome file.",
-                    "help_text": "This parameter is *mandatory* if `--genome` is not specified. If you don't have a BWA index available this will be generated for you automatically. Combine with `--save_reference` to save BWA index for future runs.",
-                    "fa_icon": "far fa-file-code"
+                    "help_text": "If using a reference genome configured in the pipeline using iGenomes, use this parameter to give the ID for the reference. This is then used to build the full paths for all required reference genome files e.g. `--genome GRCh38`. \n\nSee the [nf-core website docs](https://nf-co.re/usage/reference_genomes) for more details.",
+                    "default": "GRCh38"
                 },
                 "igenomes_ignore": {
                     "type": "boolean",
@@ -72,6 +267,10 @@
                     "hidden": true,
                     "help_text": "Do not load `igenomes.config` when running the pipeline. You may choose this option if you observe clashes between custom parameters and those supplied in `igenomes.config`."
                 },
+                "saveReference": {
+                    "type": "boolean",
+                    "default": true
+                },
                 "igenomes_base": {
                     "type": "string",
                     "format": "directory-path",
@@ -79,6 +278,24 @@
                     "fa_icon": "fas fa-ban",
                     "hidden": true,
                     "default": "s3://ngi-igenomes/igenomes/"
+                }
+            }
+        },
+        "generate_samplesheet_options": {
+            "title": "Downstream pipeline samplesheet generation options",
+            "type": "object",
+            "fa_icon": "fas fa-university",
+            "description": "Options for generating input samplesheets for complementary downstream pipelines.",
+            "properties": {
+                "generate_downstream_samplesheets": {
+                    "type": "boolean",
+                    "description": "Turn on generation of samplesheets for downstream pipelines."
+                },
+                "generate_pipeline_samplesheets": {
+                    "type": "string",
+                    "default": "taxprofiler,mag",
+                    "description": "Specify a comma separated string in quotes to specify which pipeline to generate a samplesheet for.",
+                    "pattern": "^(taxprofiler|mag)(?:,(taxprofiler|mag)){0,1}"
                 }
             }
         },
@@ -218,12 +435,6 @@
                     "description": "Base URL or local path to location of pipeline test dataset files",
                     "default": "https://raw.githubusercontent.com/nf-core/test-datasets/",
                     "hidden": true
-                },
-                "trace_report_suffix": {
-                    "type": "string",
-                    "fa_icon": "far calendar",
-                    "description": "Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss.",
-                    "hidden": true
                 }
             }
         }
@@ -233,7 +444,25 @@
             "$ref": "#/$defs/input_output_options"
         },
         {
+            "$ref": "#/$defs/general_workflow_parameters"
+        },
+        {
+            "$ref": "#/$defs/bbduk"
+        },
+        {
+            "$ref": "#/$defs/kraken2"
+        },
+        {
+            "$ref": "#/$defs/blastn"
+        },
+        {
+            "$ref": "#/$defs/fastp_options"
+        },
+        {
             "$ref": "#/$defs/reference_genome_options"
+        },
+        {
+            "$ref": "#/$defs/generate_samplesheet_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"
