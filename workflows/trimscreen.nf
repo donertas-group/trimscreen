@@ -9,8 +9,8 @@ include { paramsSummaryMap                                          } from 'plug
 include { paramsSummaryMultiqc                                      } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML                                    } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText                                    } from '../subworkflows/local/utils_nfcore_trimscreen_pipeline'
-include { getGenomeAttribute                                        } from '../subworkflows/detaxizer/utils_nfcore_detaxizer_pipeline'
-include { GENERATE_DOWNSTREAM_SAMPLESHEETS                          } from '../subworkflows/detaxizer/generate_downstream_samplesheets/main.nf'
+include { getGenomeAttribute                                        } from '../subworkflows/local/utils_nfcore_trimscreen_pipeline'
+include { GENERATE_DOWNSTREAM_SAMPLESHEETS                          } from '../subworkflows/local/generate_downstream_samplesheets/main.nf'
 
 include { BBMAP_BBDUK                                               } from '../modules/nf-core/bbmap/bbduk/main'
 include { BLAST_BLASTN                                              } from '../modules/nf-core/blast/blastn/main'
@@ -96,26 +96,7 @@ workflow TRIMSCREEN {
     )
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
     ch_versions = ch_versions.mix(FASTQC.out.versions.first())
-
-    //
-    // MODULE: Run fastp
-    //
-    if (params.preprocessing) {
-
-        FASTP (
-            RENAME_FASTQ_HEADERS_PRE.out.fastq,
-            [],
-            [],
-            params.fastp_save_trimmed_fail,
-            []
-        )
-
-        ch_fastq_for_classification = FASTP.out.reads
-        ch_versions = ch_versions.mix(FASTP.out.versions.first())
-
-    } else {
-        ch_fastq_for_classification = RENAME_FASTQ_HEADERS_PRE.out.fastq
-    }
+    ch_fastq_for_classification = RENAME_FASTQ_HEADERS_PRE.out.fastq
 
 
 
@@ -142,16 +123,14 @@ workflow TRIMSCREEN {
     ch_versions = ch_versions.mix(ISOLATE_BBDUK_IDS.out.versions.first())
 
 
-
-
     //
     // MODULE: Merge IDs
     //
     MERGE_IDS(
         ISOLATE_BBDUK_IDS.out.classified_ids
     )
-
     ch_versions = ch_versions.mix(MERGE_IDS.out.versions.first())
+
 
     //
     // MODULE: Summarize the classification results
@@ -169,10 +148,127 @@ workflow TRIMSCREEN {
 
 
 
+    //////////////////////////////////////////////////
+    //  Validation
+    //////////////////////////////////////////////////
+
+    if (params.validation_blastn) {
+
+        //
+        // MODULE: Extract the hits to fasta format
+        //
+        ch_combined = ch_fastq_for_classification
+        .join(
+            MERGE_IDS.out.classified_ids, by: [0]
+        )
+
+        PREPARE_FASTA4BLASTN (
+            ch_combined
+        )
+
+        ch_versions = ch_versions.mix(PREPARE_FASTA4BLASTN.out.versions.first())
+
+        //
+        // MODULE: Run BLASTN
+        //
+        ch_reference_fasta = ch_fasta_blastn
+
+        ch_reference_fasta_with_meta = ch_reference_fasta.map {
+            item -> [['id': "id-fasta-for-makeblastdb"], item]
+            }
+
+        BLAST_MAKEBLASTDB (
+                ch_reference_fasta_with_meta
+        )
+        ch_versions = ch_versions.mix(BLAST_MAKEBLASTDB.out.versions)
+
+        ch_fasta4blastn = PREPARE_FASTA4BLASTN.out.fasta
+            .flatMap { meta, fastaList ->
+                if (fastaList.size() == 2) {
+                return [
+                    [ meta + [ id: "${meta.id}_R1" ], fastaList[0] ],
+                    [ meta + [ id: "${meta.id}_R2" ], fastaList[1] ]
+                ]
+
+                } else {
+                    return [
+                        [ meta , fastaList ] ]
+                }
+            }
+
+        ch_blastn_db = BLAST_MAKEBLASTDB.out.db.first()
+
+        BLAST_BLASTN (
+            ch_fasta4blastn,
+            ch_blastn_db
+        )
+
+        ch_versions = ch_versions.mix(BLAST_BLASTN.out.versions.first())
+
+        ch_combined_blast = BLAST_BLASTN.out.txt.map {
+            meta, path ->
+                return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
+        }
+        .map{
+            meta, path -> tuple(groupKey(meta, meta.amount_of_files), path)
+        }
+        .groupTuple(
+                by: [0]
+            ).map {
+                meta, paths -> [ meta, paths.flatten() ]
+                }
+
+        FILTER_BLASTN_IDENTCOV (
+            BLAST_BLASTN.out.txt
+        )
+        ch_versions = ch_versions.mix(FILTER_BLASTN_IDENTCOV.out.versions.first())
+
+        ch_filtered_combined = FILTER_BLASTN_IDENTCOV.out.classified.map {
+            meta, path ->
+                return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
+        }
+        .map{
+            meta, path -> tuple(groupKey(meta, meta.amount_of_files), path)
+        }
+        .groupTuple (by: [0])
+        .map {
+            meta, paths ->
+                paths = paths.flatten()
+                return [ meta, paths ]
+        }
+
+        ch_blastn_combined = ch_combined_blast.join(ch_filtered_combined, remainder: true).map{
+            meta, blastn, filteredblastn ->
+                if (blastn[0] == null){
+                    blastn[0] = []
+                }
+                if (blastn[1] == null){
+                    blastn[1] = []
+                }
+                if (filteredblastn[0] == null){
+                    filteredblastn[0] = []
+                }
+                if (filteredblastn[1] == null){
+                    filteredblastn[1] = []
+                }
+                return [ meta, blastn[0], blastn[1], filteredblastn[0], filteredblastn[1] ]
+            }
+        ch_blastn_summary = SUMMARY_BLASTN (
+            ch_blastn_combined
+        )
+        ch_versions = ch_versions.mix(ch_blastn_summary.versions.first())
+
+    // Drop meta of blastn_summary as it is not needed for the combination step of summarizer
+        ch_blastn_summary = ch_blastn_summary.summary.map {
+                meta, path -> [path]
+            }
+        }
+
+
     //
     // MODULE: Filter out the classified or validated reads
     //
-    if (( !params.validation_blastn && params.enable_filter ) || params.filter_with_classification) {
+    if ( !params.validation_blastn && params.enable_filter ) {
 
         ch_classification = RENAME_FASTQ_HEADERS_PRE.out.fastq
             .join(MERGE_IDS.out.classified_ids, by:[0])
@@ -237,11 +333,8 @@ workflow TRIMSCREEN {
         ch_rename_filtered,
         ch_removed2rename.first()
     )
-
     ch_versions = ch_versions.mix(RENAME_FASTQ_HEADERS_AFTER.out.versions.first())
-
     }
-
 
 
     //
@@ -252,27 +345,20 @@ workflow TRIMSCREEN {
     ch_summary = ch_classification_summary.mix(ch_blastn_summary).collect().map {
             item -> [['id': "summary_of_classification_and_blastn"], item]
         }
-
     } else {
-
         ch_summary = ch_classification_summary.collect().map {
             item -> [['id': "summary_of_classification"], item]
         }
-
     }
 
     ch_summary = SUMMARIZER (
         ch_summary
     )
-
     ch_versions = ch_versions.mix(ch_summary.versions)
 
 
-
     if ( params.generate_downstream_samplesheets ) {
-
         GENERATE_DOWNSTREAM_SAMPLESHEETS ( RENAME_FASTQ_HEADERS_AFTER.out.fastq )
-
     }
 
     //
