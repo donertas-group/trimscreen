@@ -20,9 +20,15 @@ workflow SAMPLESHEET_AMPLISEQ {
             [ sampleID:sampleID, forwardReads:forwardReads, reverseReads:reverseReads]
         }
 
-    channelToSamplesheet(ch_list_for_samplesheet,"${params.outdir}/downstream_samplesheets/ampliseq", format)
-}
+    samplesheet_path = "${params.outdir}/downstream_samplesheets/ampliseq"
+    channelToSamplesheet(ch_list_for_samplesheet, samplesheet_path, format)
+    //channelToSamplesheet(ch_list_for_samplesheet,"${params.outdir}/downstream_samplesheets/ampliseq", format)
 
+    emit: 
+    ch_samplesheet = "${samplesheet_path}.${format}"
+
+}
+/*
 workflow SAMPLESHEET_TAXPROFILER {
     take:
     ch_reads
@@ -106,7 +112,7 @@ workflow SAMPLESHEET_MAG {
     channelToSamplesheet(ch_list_for_samplesheet.se, "${params.outdir}/downstream_samplesheets/mag-se", format)
 
 }
-
+*/
 workflow GENERATE_DOWNSTREAM_SAMPLESHEETS {
     take:
     ch_reads

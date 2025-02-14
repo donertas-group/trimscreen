@@ -49,6 +49,10 @@
             "description": "Parameters which enable/disable certain steps used in the workflow.",
             "default": "",
             "properties": {
+                "run_host_removal": {
+                    "type": "boolean",
+                    "description": "If host/contaminant removal should be run with simplified detaxizer."
+                },
                 "preprocessing": {
                     "type": "boolean",
                     "description": "If preprocessing with fastp should be turned on."
@@ -298,6 +302,24 @@
                     "pattern": "^(taxprofiler|mag)(?:,(taxprofiler|mag)){0,1}"
                 }
             }
+        },
+        "screening_parameter_input": {
+            "title": "Downstream pipeline samplesheet generation options",
+            "type": "object",
+            "fa_icon": "fas fa-university",
+            "description": "Options for generating input samplesheets for complementary downstream pipelines.",
+            "properties": {
+                "trunclenf_range": {
+                    "type": "string",
+                    "default": "190:5:300",
+                    "description": ".",
+                    "pattern": "^(\\d+:\\d+:\\d+|\\d+(,\\d+)*)$"},
+                "trunclenr_range": {
+                    "type": "string",
+                    "default": "190:5:300",
+                    "description": ".",
+                    "pattern": "^(\\d+:\\d+:\\d+|\\d+(,\\d+)*)$"}}
+
         },
         "institutional_config_options": {
             "title": "Institutional config options",

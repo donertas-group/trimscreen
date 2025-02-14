@@ -13,7 +13,9 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { TRIMSCREEN  } from './workflows/trimscreen'
+//include { TRIMSCREEN  } from './workflows/trimscreen'
+include { DETAXIZER_SIMPLIFIED  } from './subworkflows/local/detaxizer_simplified'
+include { TRIMSCREEN } from './workflows/trimscreen'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_trimscreen_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_trimscreen_pipeline'
 include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_trimscreen_pipeline'
@@ -48,11 +50,10 @@ workflow DONERTASGROUP_TRIMSCREEN {
     //
     // WORKFLOW: Run pipeline
     //
-    TRIMSCREEN (
-        samplesheet
-    )
-    emit:
-    multiqc_report = TRIMSCREEN.out.multiqc_report // channel: /path/to/multiqc_report.html
+    TRIMSCREEN (samplesheet)
+    
+    //emit:
+    //multiqc_report = TRIMSCREEN.out.multiqc_report // channel: /path/to/multiqc_report.html
 }
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -84,6 +85,7 @@ workflow {
     //
     // SUBWORKFLOW: Run completion tasks
     //
+    /*
     PIPELINE_COMPLETION (
         params.email,
         params.email_on_fail,
@@ -92,7 +94,7 @@ workflow {
         params.monochrome_logs,
         params.hook_url,
         DONERTASGROUP_TRIMSCREEN.out.multiqc_report
-    )
+    )*/
 }
 
 /*
