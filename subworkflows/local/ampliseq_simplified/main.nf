@@ -5,7 +5,7 @@
 */
 
 // Input
-
+/*
 if (params.metadata) {
     ch_metadata = Channel.fromPath("${params.metadata}", checkIfExists: true)
 } else { ch_metadata = Channel.empty() }
@@ -159,7 +159,7 @@ if ( !(workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1)
 // This tracks tax tables produced during pipeline and each table will be used during phyloseq
 ch_tax_for_phyloseq = Channel.empty()
 
-
+*/
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
@@ -170,84 +170,87 @@ ch_tax_for_phyloseq = Channel.empty()
 // MODULE & SUBWORKFLOW: Installed directly from nf-core/modules & nf-core/subworkflows
 //
 
-include { FASTQC                            } from '../modules/nf-core/fastqc/main'
-include { MULTIQC                           } from '../modules/nf-core/multiqc/main'
-include { VSEARCH_CLUSTER                   } from '../modules/nf-core/vsearch/cluster/main'
-include { FASTA_NEWICK_EPANG_GAPPA          } from '../subworkflows/nf-core/fasta_newick_epang_gappa/main'
+include { FASTQC                            } from '../../../modules/nf-core/fastqc/main'
+include { MULTIQC                           } from '../../../modules/nf-core/multiqc/main'
+//include { VSEARCH_CLUSTER                   } from '../../../modules/nf-core/vsearch/cluster/main'
+//include { FASTA_NEWICK_EPANG_GAPPA          } from '../../../subworkflows/nf-core/fasta_newick_epang_gappa/main'
 
 //
 // MODULE: Installed directly from nf-core/modules
 //
-
-include { RENAME_RAW_DATA_FILES         } from '../modules/local/rename_raw_data_files'
-include { DADA2_ERR                     } from '../modules/local/dada2_err'
-include { NOVASEQ_ERR                   } from '../modules/local/novaseq_err'
-include { DADA2_DENOISING               } from '../modules/local/dada2_denoising'
-include { DADA2_RMCHIMERA               } from '../modules/local/dada2_rmchimera'
-include { DADA2_STATS                   } from '../modules/local/dada2_stats'
-include { DADA2_MERGE                   } from '../modules/local/dada2_merge'
-include { DADA2_SPLITREGIONS            } from '../modules/local/dada2_splitregions'
-include { SIDLE_WF                      } from '../subworkflows/local/sidle_wf'
-include { BARRNAP                       } from '../modules/local/barrnap'
-include { BARRNAPSUMMARY                } from '../modules/local/barrnapsummary'
-include { FILTER_SSU                    } from '../modules/local/filter_ssu'
-include { FILTER_LEN as FILTER_LEN_ASV  } from '../modules/local/filter_len'
-include { FILTER_LEN as FILTER_LEN_ITSX } from '../modules/local/filter_len'
-include { MERGE_STATS as MERGE_STATS_FILTERSSU    } from '../modules/local/merge_stats'
-include { MERGE_STATS as MERGE_STATS_FILTERLENASV } from '../modules/local/merge_stats'
-include { MERGE_STATS as MERGE_STATS_CODONS       } from '../modules/local/merge_stats'
-include { FILTER_CODONS                 } from '../modules/local/filter_codons'
-include { FORMAT_FASTAINPUT             } from '../modules/local/format_fastainput'
-include { FORMAT_TAXONOMY               } from '../modules/local/format_taxonomy'
-include { ITSX_CUTASV                   } from '../modules/local/itsx_cutasv'
-include { MERGE_STATS as MERGE_STATS_STD} from '../modules/local/merge_stats'
-include { QIIME2_INSEQ                  } from '../modules/local/qiime2_inseq'
-include { QIIME2_TABLEFILTERTAXA        } from '../modules/local/qiime2_tablefiltertaxa'
-include { QIIME2_SEQFILTERTABLE         } from '../modules/local/qiime2_seqfiltertable'
-include { QIIME2_INASV                  } from '../modules/local/qiime2_inasv'
-include { QIIME2_INTREE                 } from '../modules/local/qiime2_intree'
-include { FORMAT_PPLACETAX              } from '../modules/local/format_pplacetax'
-include { FILTER_STATS                  } from '../modules/local/filter_stats'
-include { MERGE_STATS as MERGE_STATS_FILTERTAXA } from '../modules/local/merge_stats'
-include { QIIME2_BARPLOT                } from '../modules/local/qiime2_barplot'
-include { METADATA_ALL                  } from '../modules/local/metadata_all'
-include { METADATA_PAIRWISE             } from '../modules/local/metadata_pairwise'
-include { QIIME2_INTAX                  } from '../modules/local/qiime2_intax'
-include { PICRUST                       } from '../modules/local/picrust'
-include { SBDIEXPORT                    } from '../modules/local/sbdiexport'
-include { SBDIEXPORTREANNOTATE          } from '../modules/local/sbdiexportreannotate'
-include { SUMMARY_REPORT                } from '../modules/local/summary_report'
-include { PHYLOSEQ_INTAX as PHYLOSEQ_INTAX_PPLACE } from '../modules/local/phyloseq_intax'
-include { PHYLOSEQ_INTAX as PHYLOSEQ_INTAX_QIIME2 } from '../modules/local/phyloseq_intax'
-include { FILTER_CLUSTERS               } from '../modules/local/filter_clusters'
-
+include { RENAME_RAW_DATA_FILES         } from '../../../modules/ampliseq/rename_raw_data_files'
+/*
+include { DADA2_ERR                     } from '../../../modules/ampliseq/dada2_err'
+include { NOVASEQ_ERR                   } from '../../../modules/ampliseq/novaseq_err'
+include { DADA2_DENOISING               } from '../../../modules/ampliseq/dada2_denoising'
+include { DADA2_RMCHIMERA               } from '../../../modules/ampliseq/dada2_rmchimera'
+include { DADA2_STATS                   } from '../../../modules/ampliseq/dada2_stats'
+include { DADA2_MERGE                   } from '../../../modules/ampliseq/dada2_merge'
+include { DADA2_SPLITREGIONS            } from '../../../modules/ampliseq/dada2_splitregions'
+//include { SIDLE_WF                      } from '../../../subworkflows/ampliseq/sidle_wf'
+include { BARRNAP                       } from '../../../modules/ampliseq/barrnap'
+include { BARRNAPSUMMARY                } from '../../../modules/ampliseq/barrnapsummary'
+include { FILTER_SSU                    } from '../../../modules/ampliseq/filter_ssu'
+include { FILTER_LEN as FILTER_LEN_ASV  } from '../../../modules/ampliseq/filter_len'
+include { FILTER_LEN as FILTER_LEN_ITSX } from '../../../modules/ampliseq/filter_len'
+include { MERGE_STATS as MERGE_STATS_FILTERSSU    } from '../../../modules/ampliseq/merge_stats'
+include { MERGE_STATS as MERGE_STATS_FILTERLENASV } from '../../../modules/ampliseq/merge_stats'
+include { MERGE_STATS as MERGE_STATS_CODONS       } from '../../../modules/ampliseq/merge_stats'
+include { FILTER_CODONS                 } from '../../../modules/ampliseq/filter_codons'
+include { FORMAT_FASTAINPUT             } from '../../../modules/ampliseq/format_fastainput'
+include { FORMAT_TAXONOMY               } from '../../../modules/ampliseq/format_taxonomy'
+include { ITSX_CUTASV                   } from '../../../modules/ampliseq/itsx_cutasv'
+include { MERGE_STATS as MERGE_STATS_STD} from '../../../modules/ampliseq/merge_stats'
+include { QIIME2_INSEQ                  } from '../../../modules/ampliseq/qiime2_inseq'
+include { QIIME2_TABLEFILTERTAXA        } from '../../../modules/ampliseq/qiime2_tablefiltertaxa'
+include { QIIME2_SEQFILTERTABLE         } from '../../../modules/ampliseq/qiime2_seqfiltertable'
+include { QIIME2_INASV                  } from '../../../modules/ampliseq/qiime2_inasv'
+include { QIIME2_INTREE                 } from '../../../modules/ampliseq/qiime2_intree'
+include { FORMAT_PPLACETAX              } from '../../../modules/ampliseq/format_pplacetax'
+include { FILTER_STATS                  } from '../../../modules/ampliseq/filter_stats'
+include { MERGE_STATS as MERGE_STATS_FILTERTAXA } from '../../../modules/ampliseq/merge_stats'
+include { QIIME2_BARPLOT                } from '../../../modules/ampliseq/qiime2_barplot'
+include { METADATA_ALL                  } from '../../../modules/ampliseq/metadata_all'
+include { METADATA_PAIRWISE             } from '../../../modules/ampliseq/metadata_pairwise'
+include { QIIME2_INTAX                  } from '../../../modules/ampliseq/qiime2_intax'
+include { PICRUST                       } from '../../../modules/ampliseq/picrust'
+include { SBDIEXPORT                    } from '../../../modules/ampliseq/sbdiexport'
+include { SBDIEXPORTREANNOTATE          } from '../../../modules/ampliseq/sbdiexportreannotate'
+include { SUMMARY_REPORT                } from '../../../modules/ampliseq/summary_report'
+include { PHYLOSEQ_INTAX as PHYLOSEQ_INTAX_PPLACE } from '../../../modules/ampliseq/phyloseq_intax'
+include { PHYLOSEQ_INTAX as PHYLOSEQ_INTAX_QIIME2 } from '../../../modules/ampliseq/phyloseq_intax'
+include { FILTER_CLUSTERS               } from '../../../modules/ampliseq/filter_clusters'
+*/
 //
-// SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
+// SUBWORKFLOW: Consisting of a mix of ampliseq and nf-core/modules
 //
 
-include { PARSE_INPUT                   } from '../subworkflows/local/parse_input'
-include { DADA2_PREPROCESSING           } from '../subworkflows/local/dada2_preprocessing'
-include { QIIME2_PREPTAX                } from '../subworkflows/local/qiime2_preptax'
-include { QIIME2_TAXONOMY               } from '../subworkflows/local/qiime2_taxonomy'
-include { CUTADAPT_WORKFLOW             } from '../subworkflows/local/cutadapt_workflow'
-include { DADA2_TAXONOMY_WF             } from '../subworkflows/local/dada2_taxonomy_wf'
-include { SINTAX_TAXONOMY_WF            } from '../subworkflows/local/sintax_taxonomy_wf'
-include { KRAKEN2_TAXONOMY_WF           } from '../subworkflows/local/kraken2_taxonomy_wf'
-include { QIIME2_EXPORT                 } from '../subworkflows/local/qiime2_export'
-include { QIIME2_BARPLOTAVG             } from '../subworkflows/local/qiime2_barplotavg'
-include { QIIME2_DIVERSITY              } from '../subworkflows/local/qiime2_diversity'
-include { QIIME2_ANCOM                  } from '../subworkflows/local/qiime2_ancom'
-include { PHYLOSEQ_WORKFLOW             } from '../subworkflows/local/phyloseq_workflow'
+include { PARSE_INPUT                   } from '../../../subworkflows/ampliseq/parse_input'
+/*
+include { DADA2_PREPROCESSING           } from '../../../subworkflows/ampliseq/dada2_preprocessing'
+include { QIIME2_PREPTAX                } from '../../../subworkflows/ampliseq/qiime2_preptax'
+include { QIIME2_TAXONOMY               } from '../../../subworkflows/ampliseq/qiime2_taxonomy'
+include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/ampliseq/cutadapt_workflow'
+include { DADA2_TAXONOMY_WF             } from '../../../subworkflows/ampliseq/dada2_taxonomy_wf'
+include { SINTAX_TAXONOMY_WF            } from '../../../subworkflows/ampliseq/sintax_taxonomy_wf'
+include { KRAKEN2_TAXONOMY_WF           } from '../../../subworkflows/ampliseq/kraken2_taxonomy_wf'
+include { QIIME2_EXPORT                 } from '../../../subworkflows/ampliseq/qiime2_export'
+include { QIIME2_BARPLOTAVG             } from '../../../subworkflows/ampliseq/qiime2_barplotavg'
+include { QIIME2_DIVERSITY              } from '../../../subworkflows/ampliseq/qiime2_diversity'
+include { QIIME2_ANCOM                  } from '../../../subworkflows/ampliseq/qiime2_ancom'
+include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/ampliseq/phyloseq_workflow'
+*/
 
 //
 // FUNCTIONS
 //
-include { samplesheetToList      } from 'plugin/nf-schema'
-include { paramsSummaryMap       } from 'plugin/nf-schema'
-include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_ampliseq_pipeline'
-include { makeComplement         } from '../subworkflows/local/utils_nfcore_ampliseq_pipeline'
+//include { samplesheetToList      } from '../../plugin/nf-schema'
+//include { paramsSummaryMap       } from '../../plugin/nf-schema'
+include { paramsSummaryMultiqc   } from '../../../subworkflows/nf-core/utils_nfcore_pipeline'
+include { softwareVersionsToYAML } from '../../../subworkflows/nf-core/utils_nfcore_pipeline'
+include { methodsDescriptionText } from '../../../subworkflows/ampliseq/utils_nfcore_ampliseq_pipeline'
+include { makeComplement         } from '../../../subworkflows/ampliseq/utils_nfcore_ampliseq_pipeline'
+
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -255,66 +258,44 @@ include { makeComplement         } from '../subworkflows/local/utils_nfcore_ampl
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-workflow AMPLISEQ {
+workflow AMPLISEQ_SIMPLIFIED {
+    take:
+    ch_samplesheet
+    ch_params
 
     main:
 
-    ch_versions = Channel.empty()
-    ch_multiqc_files = Channel.empty()
     //
     // Create input channels
     //
-    ch_input_fasta = Channel.empty()
-    ch_input_reads = Channel.empty()
-    if ( params.input ) {
-        // See the documentation https://nextflow-io.github.io/nf-validation/samplesheets/fromSamplesheet/
-        ch_input_reads = Channel.fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json")) // meta: meta.sample, meta.run
-            .map{ meta, readfw, readrv ->
-                meta.single_end = single_end.toBoolean()
-                def reads = single_end ? readfw : [readfw,readrv]
-                if ( !meta.single_end && !readrv ) { error("Entry `reverseReads` is missing in $params.input for $meta.sample, either correct the samplesheet or use `--single_end`, `--pacbio`, or `--iontorrent`") } // make sure that reverse reads are present when single_end isn't specified
-                if ( !meta.single_end && ( readfw.getSimpleName() == meta.sample || readrv.getSimpleName() == meta.sample ) ) { error("Entry `sampleID` cannot be identical to simple name of `forwardReads` or `reverseReads`, please change `sampleID` in $params.input for sample $meta.sample") } // sample name and any file name without extensions aren't identical, because rename_raw_data_files.nf would forward 3 files (2 renamed +1 input) instead of 2 in that case
-                if ( meta.single_end && ( readfw.getSimpleName() == meta.sample+"_1" || readfw.getSimpleName() == meta.sample+"_2" ) ) { error("Entry `sampleID`+ `_1` or `_2` cannot be identical to simple name of `forwardReads`, please change `sampleID` in $params.input for sample $meta.sample") } // sample name and file name without extensions aren't identical, because rename_raw_data_files.nf would forward 2 files (1 renamed +1 input) instead of 1 in that case
-                return [meta, reads] }
-    } else if ( params.input_fasta ) {
-        ch_input_fasta = Channel.fromPath(params.input_fasta, checkIfExists: true)
-    } else if ( params.input_folder ) {
-        PARSE_INPUT ( params.input_folder, single_end, params.multiple_sequencing_runs, params.extension )
-        ch_input_reads = PARSE_INPUT.out.reads
-    } else {
-        error("One of `--input`, `--input_fasta`, `--input_folder` must be provided!")
-    }
+    ch_versions = Channel.empty()
+    ch_multiqc_files = Channel.empty()
 
+    ch_input_reads = ch_samplesheet
+    .map{ meta, readfw, readrv, _ -> return [meta, [readfw, readrv]]} // ignoring long_read option which is enabled in detaxizer
+/*        
+        meta.single_end = single_end.toBoolean()
+        def reads = single_end ? readfw : [readfw,readrv]
+        if ( !meta.single_end && !readrv ) { error("Entry `reverseReads` is missing in $params.input for $meta.sample, either correct the samplesheet or use `--single_end`, `--pacbio`, or `--iontorrent`") } // make sure that reverse reads are present when single_end isn't specified
+        if ( !meta.single_end && ( readfw.getSimpleName() == meta.sample || readrv.getSimpleName() == meta.sample ) ) { error("Entry `sampleID` cannot be identical to simple name of `forwardReads` or `reverseReads`, please change `sampleID` in $params.input for sample $meta.sample") } // sample name and any file name without extensions aren't identical, because rename_raw_data_files.nf would forward 3 files (2 renamed +1 input) instead of 2 in that case
+        if ( meta.single_end && ( readfw.getSimpleName() == meta.sample+"_1" || readfw.getSimpleName() == meta.sample+"_2" ) ) { error("Entry `sampleID`+ `_1` or `_2` cannot be identical to simple name of `forwardReads`, please change `sampleID` in $params.input for sample $meta.sample") } // sample name and file name without extensions aren't identical, because rename_raw_data_files.nf would forward 2 files (1 renamed +1 input) instead of 1 in that case
+
+        return [meta, reads] }
+*/
     //
     // Add primer info to sequencing files
     //
-    if ( params.multiregion ) {
-        // is multiple region analysis
-        ch_input_reads
-            .combine( Channel.fromList(samplesheetToList(params.multiregion, "${projectDir}/assets/schema_multiregion.json")) )
-            .map{ info, reads, multi ->
-                def meta = info + multi
-                return [ meta, reads ] }
-            .map{ info, reads ->
-                def meta = info +
-                    [id: info.sample+"_"+info.fw_primer+"_"+info.rv_primer] +
-                    [fw_primer_revcomp: makeComplement(info.fw_primer.reverse())] +
-                    [rv_primer_revcomp: makeComplement(info.rv_primer.reverse())]
-                return [ meta, reads ] }
-            .set { ch_input_reads }
-    } else {
-        // is single region
-        ch_input_reads
-            .map{ info, reads ->
-                def meta = info +
-                    [region: null, region_length: null] +
-                    [fw_primer: params.FW_primer, rv_primer: params.RV_primer] +
-                    [id: info.sample] +
-                    [fw_primer_revcomp: params.FW_primer ? makeComplement(params.FW_primer.reverse()) : null] +
-                    [rv_primer_revcomp: params.RV_primer ? makeComplement(params.RV_primer.reverse()) : null]
-                return [ meta, reads ] }
-            .set { ch_input_reads }
-    }
+    // single region (simplified by disabling multiple region analysis)
+    ch_input_reads
+        .map{ info, reads ->
+            def meta = info +
+                [region: null, region_length: null] +
+                [fw_primer: params.FW_primer, rv_primer: params.RV_primer] +
+                [id: info.sample] +
+                [fw_primer_revcomp: params.FW_primer ? makeComplement(params.FW_primer.reverse()) : null] +
+                [rv_primer_revcomp: params.RV_primer ? makeComplement(params.RV_primer.reverse()) : null]
+            return [ meta, reads ] }
+        .set { ch_input_reads }
 
     //Filter empty files
     ch_input_reads.dump(tag:'ch_input_reads')
@@ -340,9 +321,11 @@ workflow AMPLISEQ {
     //
     // MODULE: Rename files
     //
+
     RENAME_RAW_DATA_FILES ( ch_reads )
     ch_versions = ch_versions.mix(RENAME_RAW_DATA_FILES.out.versions.first())
-
+    ch_versions.view()
+/*
     //
     // MODULE: Run FastQC
     //
@@ -1040,7 +1023,7 @@ workflow AMPLISEQ {
     emit:
     multiqc_report = ch_multiqc_report_list      // MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
-
+*/
 }
 
 /*

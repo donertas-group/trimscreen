@@ -13,6 +13,7 @@ include { getGenomeAttribute                                        } from '../s
 include { GENERATE_DOWNSTREAM_SAMPLESHEETS                          } from '../subworkflows/local/generate_downstream_samplesheets/main.nf'// detaxizer has original subworkflow
 include { DETAXIZER_SIMPLIFIED                                      } from '../subworkflows/local/detaxizer_simplified/main.nf'
 include { AMPLISEQ_SCREENING                                        } from '../subworkflows/local/ampliseq_screening/main.nf'
+include { AMPLISEQ_SIMPLIFIED                                       } from '../subworkflows/local/ampliseq_simplified/main.nf'
 
 include { BBMAP_BBDUK                                               } from '../modules/nf-core/bbmap/bbduk/main'
 include { BLAST_BLASTN                                              } from '../modules/nf-core/blast/blastn/main'
@@ -28,6 +29,7 @@ include { RENAME_FASTQ_HEADERS_AFTER                                } from '../m
 include { SUMMARY_CLASSIFICATION                                    } from '../modules/detaxizer/summary_classification'
 include { SUMMARY_BLASTN                                            } from '../modules/detaxizer/summary_blastn'
 include { SUMMARIZER                                                } from '../modules/detaxizer/summarizer'
+
 
 //include { GENERATE_PARAMS                                           } from '../modules/local/generate_params'
 /*
@@ -77,7 +79,7 @@ workflow TRIMSCREEN {
 
     } else {
 
-        AMPLISEQ_SCREENING ()//(ch_samplesheet)
+        AMPLISEQ_SCREENING (ch_samplesheet)
 
         //multiqc_report = AMPLISEQ_SCREENING.out.multiqc_report
     }
