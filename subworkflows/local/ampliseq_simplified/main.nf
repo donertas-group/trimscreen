@@ -178,7 +178,7 @@ include { MULTIQC                           } from '../../../modules/nf-core/mul
 //
 // MODULE: Installed directly from nf-core/modules
 //
-include { RENAME_RAW_DATA_FILES         } from '../../../modules/ampliseq/rename_raw_data_files'
+include { RENAME_RAW_DATA_FILES         } from '../../../modules/local/ampliseq/rename_raw_data_files'
 /*
 include { DADA2_ERR                     } from '../../../modules/ampliseq/dada2_err'
 include { NOVASEQ_ERR                   } from '../../../modules/ampliseq/novaseq_err'
@@ -225,12 +225,12 @@ include { FILTER_CLUSTERS               } from '../../../modules/ampliseq/filter
 // SUBWORKFLOW: Consisting of a mix of ampliseq and nf-core/modules
 //
 
-include { PARSE_INPUT                   } from '../../../subworkflows/ampliseq/parse_input'
+include { PARSE_INPUT                   } from '../../../subworkflows/local/ampliseq/parse_input'
+include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/local/ampliseq/cutadapt_workflow'
+include { DADA2_PREPROCESSING  } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
 /*
-include { DADA2_PREPROCESSING           } from '../../../subworkflows/ampliseq/dada2_preprocessing'
 include { QIIME2_PREPTAX                } from '../../../subworkflows/ampliseq/qiime2_preptax'
 include { QIIME2_TAXONOMY               } from '../../../subworkflows/ampliseq/qiime2_taxonomy'
-include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/ampliseq/cutadapt_workflow'
 include { DADA2_TAXONOMY_WF             } from '../../../subworkflows/ampliseq/dada2_taxonomy_wf'
 include { SINTAX_TAXONOMY_WF            } from '../../../subworkflows/ampliseq/sintax_taxonomy_wf'
 include { KRAKEN2_TAXONOMY_WF           } from '../../../subworkflows/ampliseq/kraken2_taxonomy_wf'
@@ -248,8 +248,8 @@ include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/ampliseq/p
 //include { paramsSummaryMap       } from '../../plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../../../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../../../subworkflows/ampliseq/utils_nfcore_ampliseq_pipeline'
-include { makeComplement         } from '../../../subworkflows/ampliseq/utils_nfcore_ampliseq_pipeline'
+include { methodsDescriptionText } from '../../../subworkflows/local/ampliseq/utils_nfcore_ampliseq_pipeline'
+include { makeComplement         } from '../../../subworkflows/local/ampliseq/utils_nfcore_ampliseq_pipeline'
 
 
 /*
@@ -291,7 +291,7 @@ workflow AMPLISEQ_SIMPLIFIED {
             def meta = info +
                 [region: null, region_length: null] +
                 [fw_primer: params.FW_primer, rv_primer: params.RV_primer] +
-                [id: info.sample] +
+                [id: info.id] +
                 [fw_primer_revcomp: params.FW_primer ? makeComplement(params.FW_primer.reverse()) : null] +
                 [rv_primer_revcomp: params.RV_primer ? makeComplement(params.RV_primer.reverse()) : null]
             return [ meta, reads ] }
@@ -334,38 +334,44 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
         ch_versions = ch_versions.mix(FASTQC.out.versions.first())
     }
-
+*/
     //
     // MODULE: Cutadapt
     //
     if (!params.skip_cutadapt) {
         CUTADAPT_WORKFLOW (
             RENAME_RAW_DATA_FILES.out.fastq,
-            params.illumina_pe_its,
-            params.double_primer
+            false, //replacing params.illumina_pe_its,
+            false //replacing params.double_primer
         ).reads.set { ch_trimmed_reads }
         ch_multiqc_files = ch_multiqc_files.mix(CUTADAPT_WORKFLOW.out.logs.collect{it[1]})
         ch_versions = ch_versions.mix(CUTADAPT_WORKFLOW.out.versions)
     } else {
         ch_trimmed_reads = RENAME_RAW_DATA_FILES.out.fastq
     }
+    
+/*
+    ch_trimmed_reads.combine(ch_params).map{ meta, reads, runID, trunclenf, trunclenr ->
+        tuple([meta + [runID: runID]], reads, trunclenf, trunclenr)
+    }.set{ ch_trimmed_reads }
+*/
+
 
     //
     // SUBWORKFLOW: Read preprocessing & QC plotting with DADA2
     //
+    // In this modified subworkflow, runID is incorporated into meta.id and original meta.id is renamed to meta.sample
     DADA2_PREPROCESSING (
         ch_trimmed_reads,
-        single_end,
-        find_truncation_values,
-        trunclenf,
-        trunclenr
+        ch_params
     ).reads.set { ch_filt_reads }
+
     ch_versions = ch_versions.mix(DADA2_PREPROCESSING.out.versions)
 
     //
     // MODULES: ASV generation with DADA2
     //
-
+/*
     //run error model
     if ( !params.illumina_novaseq ) {
         DADA2_ERR ( ch_filt_reads )

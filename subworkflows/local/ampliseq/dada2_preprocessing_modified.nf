@@ -2,12 +2,37 @@
  * Preprocessing with DADA2
  */
 
-include { DADA2_QUALITY as DADA2_QUALITY1 } from '../../modules/ampliseq/dada2_quality'
-include { TRUNCLEN                        } from '../../modules/ampliseq/trunclen'
-include { DADA2_FILTNTRIM                 } from '../../modules/ampliseq/dada2_filtntrim'
-include { DADA2_QUALITY as DADA2_QUALITY2 } from '../../modules/ampliseq/dada2_quality'
+include { DADA2_QUALITY as DADA2_QUALITY1 } from '../../../modules/local/ampliseq/dada2_quality'
+include { TRUNCLEN                        } from '../../../modules/local/ampliseq/trunclen'
+include { DADA2_FILTNTRIM                 } from '../../../modules/local/ampliseq/dada2_filtntrim'
+include { DADA2_QUALITY as DADA2_QUALITY2 } from '../../../modules/local/ampliseq/dada2_quality'
 
 workflow DADA2_PREPROCESSING {
+    take:
+    ch_trimmed_reads
+    ch_params
+
+    main:
+    ch_versions_dada2_preprocessing = Channel.empty()
+
+    ch_trimmed_reads
+        .map { meta, reads -> [ reads[0] ] }
+        .collect()
+        .map { reads -> [ "FW", reads ] }
+        .set { ch_all_trimmed_fw }
+    ch_trimmed_reads
+        .map { meta, reads -> [ reads[1] ] }
+        .collect()
+        .map { reads -> [ "RV", reads ] }
+        .set { ch_all_trimmed_rv }
+    ch_all_trimmed_fw
+        .mix ( ch_all_trimmed_rv )
+        .set { ch_all_trimmed_reads }
+
+    single_end = false
+    find_truncation_values = false
+
+    /*
     take:
     ch_trimmed_reads
     single_end
@@ -40,7 +65,7 @@ workflow DADA2_PREPROCESSING {
             .mix ( ch_all_trimmed_rv )
             .set { ch_all_trimmed_reads }
     }
-
+*/
     ch_DADA2_QUALITY1_SVG = Channel.empty()
     if ( !params.skip_dada_quality ) {
         DADA2_QUALITY1 ( ch_all_trimmed_reads.dump(tag: 'into_dada2_quality') )
@@ -48,7 +73,7 @@ workflow DADA2_PREPROCESSING {
         DADA2_QUALITY1.out.warning.subscribe { if ( it.baseName.toString().startsWith("WARNING") ) log.warn it.baseName.toString().replace("WARNING ","DADA2_QUALITY1: ") }
         ch_DADA2_QUALITY1_SVG = DADA2_QUALITY1.out.svg
     }
-
+/*
     //find truncation values in case they are not supplied
     if ( find_truncation_values ) {
         TRUNCLEN ( DADA2_QUALITY1.out.tsv )
@@ -69,6 +94,16 @@ workflow DADA2_PREPROCESSING {
             .set { ch_trunc }
     }
     ch_trimmed_reads.combine(ch_trunc).set { ch_trimmed_reads }
+
+*/
+
+    ch_trimmed_reads.combine(ch_params).map{ meta, reads, runID, trunclenf, trunclenr ->
+        def new_meta = meta.clone()  // Clone meta to avoid mutating the original object
+        new_meta.sample = meta.id
+        new_meta.id = "run_${trunclenf}${trunclenr}.${meta.id}"  // Create new sample field with concatenated value
+        tuple(new_meta + [runID: runID], reads, ['FW', trunclenf], ['RV', trunclenr])
+    }.set{ ch_trimmed_reads }
+
 
     //filter reads
     DADA2_FILTNTRIM ( ch_trimmed_reads.dump(tag: 'into_filtntrim')  )
