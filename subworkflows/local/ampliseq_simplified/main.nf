@@ -5,11 +5,16 @@
 */
 
 // Input
-/*
+
+    //standard ref taxonomy input from params.dada_ref_taxonomy & conf/ref_databases.config
+    ch_dada_ref_taxonomy = params.dada_ref_databases.containsKey(params.dada_ref_taxonomy) ? Channel.fromList(params.dada_ref_databases[params.dada_ref_taxonomy]["file"]).map { file(it) } : Channel.empty()
+    val_dada_ref_taxonomy = params.dada_ref_taxonomy.replace('=','_').replace('.','_')
+
 if (params.metadata) {
     ch_metadata = Channel.fromPath("${params.metadata}", checkIfExists: true)
 } else { ch_metadata = Channel.empty() }
 
+/*
 if (params.classifier) {
     ch_qiime_classifier = Channel.fromPath("${params.classifier}", checkIfExists: true)
 } else { ch_qiime_classifier = Channel.empty() }
@@ -95,11 +100,6 @@ if (params.kraken2_ref_tax_custom) {
     val_kraken2_ref_taxonomy = "none"
 }
 
-// report sources
-ch_report_template = Channel.fromPath("${params.report_template}", checkIfExists: true)
-ch_report_css = Channel.fromPath("${params.report_css}", checkIfExists: true)
-ch_report_logo = Channel.fromPath("${params.report_logo}", checkIfExists: true)
-ch_report_abstract = params.report_abstract ? Channel.fromPath(params.report_abstract, checkIfExists: true) : []
 
 // Set non-params Variables
 
@@ -107,6 +107,12 @@ single_end = params.single_end
 if (params.pacbio || params.iontorrent) {
     single_end = true
 }
+
+// report sources
+ch_report_template = Channel.fromPath("${params.report_template}", checkIfExists: true)
+ch_report_css = Channel.fromPath("${params.report_css}", checkIfExists: true)
+ch_report_logo = Channel.fromPath("${params.report_logo}", checkIfExists: true)
+ch_report_abstract = params.report_abstract ? Channel.fromPath(params.report_abstract, checkIfExists: true) : []
 
 trunclenf = params.trunclenf ?: 0
 trunclenr = params.trunclenr ?: 0
@@ -119,11 +125,14 @@ if ( !single_end && !params.illumina_pe_its && (params.trunclenf == null || para
 tax_agglom_min = params.tax_agglom_min
 tax_agglom_max = params.tax_agglom_max
 
+*/
+
 //use custom taxlevels from --dada_assign_taxlevels or database specific taxlevels if specified in conf/ref_databases.config
 if ( params.dada_ref_taxonomy ) {
     taxlevels = params.dada_assign_taxlevels ? "${params.dada_assign_taxlevels}" :
         params.dada_ref_databases.containsKey(params.dada_ref_taxonomy) && params.dada_ref_databases[params.dada_ref_taxonomy]["taxlevels"] ? params.dada_ref_databases[params.dada_ref_taxonomy]["taxlevels"] : ""
 } else { taxlevels = params.dada_assign_taxlevels ? "${params.dada_assign_taxlevels}" : "" }
+/*
 if ( params.sintax_ref_taxonomy ) {
     sintax_taxlevels = params.sintax_ref_databases.containsKey(params.sintax_ref_taxonomy) && params.sintax_ref_databases[params.sintax_ref_taxonomy]["taxlevels"] ? params.sintax_ref_databases[params.sintax_ref_taxonomy]["taxlevels"] : ""
 } else {
@@ -148,6 +157,7 @@ if ( !(workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1)
     run_qiime2_taxonomy = false
 }
 
+*/
 //only run QIIME2 downstream analysis when taxonomy is actually calculated and all required data is available
 if ( !(workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) && !params.skip_taxonomy && !params.skip_qiime && !params.skip_qiime_downstream && (!params.skip_dada_taxonomy || params.sintax_ref_taxonomy || params.qiime_ref_taxonomy || params.qiime_ref_tax_custom || params.kraken2_ref_taxonomy || params.kraken2_ref_tax_custom || params.multiregion) ) {
     run_qiime2 = true
@@ -159,7 +169,6 @@ if ( !(workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1)
 // This tracks tax tables produced during pipeline and each table will be used during phyloseq
 ch_tax_for_phyloseq = Channel.empty()
 
-*/
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
@@ -178,45 +187,45 @@ include { MULTIQC                           } from '../../../modules/nf-core/mul
 //
 // MODULE: Installed directly from nf-core/modules
 //
-include { RENAME_RAW_DATA_FILES         } from '../../../modules/local/ampliseq/rename_raw_data_files'
+include { RENAME_RAW_DATA_FILES                      } from '../../../modules/local/ampliseq/rename_raw_data_files'
+include { DADA2_ERR                                  } from '../../../modules/local/ampliseq/dada2_err'
+include { NOVASEQ_ERR                                } from '../../../modules/local/ampliseq/novaseq_err'
+include { DADA2_DENOISING                            } from '../../../modules/local/ampliseq/dada2_denoising'
+include { DADA2_RMCHIMERA                            } from '../../../modules/local/ampliseq/dada2_rmchimera'
+include { DADA2_STATS                                } from '../../../modules/local/ampliseq/dada2_stats'
+include { DADA2_MERGE                                } from '../../../modules/local/ampliseq/dada2_merge'
+include { DADA2_SPLITREGIONS                         } from '../../../modules/local/ampliseq/dada2_splitregions'
+include { MERGE_STATS as MERGE_STATS_STD            } from '../../../modules/local/ampliseq/merge_stats'
+include { FILTER_SSU                                } from '../../../modules/local/ampliseq/filter_ssu'
+include { FILTER_LEN as FILTER_LEN_ASV              } from '../../../modules/local/ampliseq/filter_len'
+include { FILTER_LEN as FILTER_LEN_ITSX             } from '../../../modules/local/ampliseq/filter_len'
+include { MERGE_STATS as MERGE_STATS_FILTERSSU      } from '../../../modules/local/ampliseq/merge_stats'
+include { MERGE_STATS as MERGE_STATS_FILTERLENASV   } from '../../../modules/local/ampliseq/merge_stats'
+include { MERGE_STATS as MERGE_STATS_CODONS         } from '../../../modules/local/ampliseq/merge_stats'
+include { FILTER_CODONS                             } from '../../../modules/local/ampliseq/filter_codons'
+include { FORMAT_FASTAINPUT                         } from '../../../modules/local/ampliseq/format_fastainput'
+include { FORMAT_TAXONOMY                           } from '../../../modules/local/ampliseq/format_taxonomy'
+include { FILTER_STATS                              } from '../../../modules/local/ampliseq/filter_stats'
+include { MERGE_STATS as MERGE_STATS_FILTERTAXA     } from '../../../modules/local/ampliseq/merge_stats'
+include { PICRUST                                   } from '../../../modules/local/ampliseq/picrust'
+include { METADATA_ALL                              } from '../../../modules/local/ampliseq/metadata_all'
+include { METADATA_PAIRWISE                         } from '../../../modules/local/ampliseq/metadata_pairwise'
+include { SUMMARY_REPORT                            } from '../../../modules/local/ampliseq/summary_report'
 /*
-include { DADA2_ERR                     } from '../../../modules/ampliseq/dada2_err'
-include { NOVASEQ_ERR                   } from '../../../modules/ampliseq/novaseq_err'
-include { DADA2_DENOISING               } from '../../../modules/ampliseq/dada2_denoising'
-include { DADA2_RMCHIMERA               } from '../../../modules/ampliseq/dada2_rmchimera'
-include { DADA2_STATS                   } from '../../../modules/ampliseq/dada2_stats'
-include { DADA2_MERGE                   } from '../../../modules/ampliseq/dada2_merge'
-include { DADA2_SPLITREGIONS            } from '../../../modules/ampliseq/dada2_splitregions'
 //include { SIDLE_WF                      } from '../../../subworkflows/ampliseq/sidle_wf'
 include { BARRNAP                       } from '../../../modules/ampliseq/barrnap'
 include { BARRNAPSUMMARY                } from '../../../modules/ampliseq/barrnapsummary'
-include { FILTER_SSU                    } from '../../../modules/ampliseq/filter_ssu'
-include { FILTER_LEN as FILTER_LEN_ASV  } from '../../../modules/ampliseq/filter_len'
-include { FILTER_LEN as FILTER_LEN_ITSX } from '../../../modules/ampliseq/filter_len'
-include { MERGE_STATS as MERGE_STATS_FILTERSSU    } from '../../../modules/ampliseq/merge_stats'
-include { MERGE_STATS as MERGE_STATS_FILTERLENASV } from '../../../modules/ampliseq/merge_stats'
-include { MERGE_STATS as MERGE_STATS_CODONS       } from '../../../modules/ampliseq/merge_stats'
-include { FILTER_CODONS                 } from '../../../modules/ampliseq/filter_codons'
-include { FORMAT_FASTAINPUT             } from '../../../modules/ampliseq/format_fastainput'
-include { FORMAT_TAXONOMY               } from '../../../modules/ampliseq/format_taxonomy'
 include { ITSX_CUTASV                   } from '../../../modules/ampliseq/itsx_cutasv'
-include { MERGE_STATS as MERGE_STATS_STD} from '../../../modules/ampliseq/merge_stats'
 include { QIIME2_INSEQ                  } from '../../../modules/ampliseq/qiime2_inseq'
 include { QIIME2_TABLEFILTERTAXA        } from '../../../modules/ampliseq/qiime2_tablefiltertaxa'
 include { QIIME2_SEQFILTERTABLE         } from '../../../modules/ampliseq/qiime2_seqfiltertable'
 include { QIIME2_INASV                  } from '../../../modules/ampliseq/qiime2_inasv'
 include { QIIME2_INTREE                 } from '../../../modules/ampliseq/qiime2_intree'
 include { FORMAT_PPLACETAX              } from '../../../modules/ampliseq/format_pplacetax'
-include { FILTER_STATS                  } from '../../../modules/ampliseq/filter_stats'
-include { MERGE_STATS as MERGE_STATS_FILTERTAXA } from '../../../modules/ampliseq/merge_stats'
 include { QIIME2_BARPLOT                } from '../../../modules/ampliseq/qiime2_barplot'
-include { METADATA_ALL                  } from '../../../modules/ampliseq/metadata_all'
-include { METADATA_PAIRWISE             } from '../../../modules/ampliseq/metadata_pairwise'
 include { QIIME2_INTAX                  } from '../../../modules/ampliseq/qiime2_intax'
-include { PICRUST                       } from '../../../modules/ampliseq/picrust'
 include { SBDIEXPORT                    } from '../../../modules/ampliseq/sbdiexport'
 include { SBDIEXPORTREANNOTATE          } from '../../../modules/ampliseq/sbdiexportreannotate'
-include { SUMMARY_REPORT                } from '../../../modules/ampliseq/summary_report'
 include { PHYLOSEQ_INTAX as PHYLOSEQ_INTAX_PPLACE } from '../../../modules/ampliseq/phyloseq_intax'
 include { PHYLOSEQ_INTAX as PHYLOSEQ_INTAX_QIIME2 } from '../../../modules/ampliseq/phyloseq_intax'
 include { FILTER_CLUSTERS               } from '../../../modules/ampliseq/filter_clusters'
@@ -227,18 +236,19 @@ include { FILTER_CLUSTERS               } from '../../../modules/ampliseq/filter
 
 include { PARSE_INPUT                   } from '../../../subworkflows/local/ampliseq/parse_input'
 include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/local/ampliseq/cutadapt_workflow'
-include { DADA2_PREPROCESSING  } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
+include { DADA2_PREPROCESSING  } from '../../../subworkflows/local/ampliseq/dada2_preprocessing'
+//include { DADA2_PREPROCESSING  } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
+include { DADA2_TAXONOMY_WF             } from '../../../subworkflows/local/ampliseq/dada2_taxonomy_wf'
+include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/local/ampliseq/phyloseq_workflow'
 /*
 include { QIIME2_PREPTAX                } from '../../../subworkflows/ampliseq/qiime2_preptax'
 include { QIIME2_TAXONOMY               } from '../../../subworkflows/ampliseq/qiime2_taxonomy'
-include { DADA2_TAXONOMY_WF             } from '../../../subworkflows/ampliseq/dada2_taxonomy_wf'
 include { SINTAX_TAXONOMY_WF            } from '../../../subworkflows/ampliseq/sintax_taxonomy_wf'
 include { KRAKEN2_TAXONOMY_WF           } from '../../../subworkflows/ampliseq/kraken2_taxonomy_wf'
 include { QIIME2_EXPORT                 } from '../../../subworkflows/ampliseq/qiime2_export'
 include { QIIME2_BARPLOTAVG             } from '../../../subworkflows/ampliseq/qiime2_barplotavg'
 include { QIIME2_DIVERSITY              } from '../../../subworkflows/ampliseq/qiime2_diversity'
 include { QIIME2_ANCOM                  } from '../../../subworkflows/ampliseq/qiime2_ancom'
-include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/ampliseq/phyloseq_workflow'
 */
 
 //
@@ -261,7 +271,8 @@ include { makeComplement         } from '../../../subworkflows/local/ampliseq/ut
 workflow AMPLISEQ_SIMPLIFIED {
     take:
     ch_samplesheet
-    ch_params
+    trunclenf
+    trunclenr
 
     main:
 
@@ -270,6 +281,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     //
     ch_versions = Channel.empty()
     ch_multiqc_files = Channel.empty()
+    ch_input_fasta = Channel.empty()
 
     ch_input_reads = ch_samplesheet
     .map{ meta, readfw, readrv, _ -> return [meta, [readfw, readrv]]} // ignoring long_read option which is enabled in detaxizer
@@ -350,28 +362,28 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_trimmed_reads = RENAME_RAW_DATA_FILES.out.fastq
     }
     
-/*
-    ch_trimmed_reads.combine(ch_params).map{ meta, reads, runID, trunclenf, trunclenr ->
-        tuple([meta + [runID: runID]], reads, trunclenf, trunclenr)
-    }.set{ ch_trimmed_reads }
-*/
-
 
     //
     // SUBWORKFLOW: Read preprocessing & QC plotting with DADA2
     //
-    // In this modified subworkflow, runID is incorporated into meta.id and original meta.id is renamed to meta.sample
+    /*/ In this modified subworkflow of dada2_preprocessing, runID is incorporated into meta.id and original meta.id is renamed to meta.sample
     DADA2_PREPROCESSING (
         ch_trimmed_reads,
         ch_params
+    ).reads.set { ch_filt_reads }*/
+    DADA2_PREPROCESSING (
+        ch_trimmed_reads, 
+        false, // replacing single_end
+        false, // replacing find_truncation_values
+        trunclenf, 
+        trunclenr
     ).reads.set { ch_filt_reads }
 
-    ch_versions = ch_versions.mix(DADA2_PREPROCESSING.out.versions)
+    ch_versions = ch_versions.mix(DADA2_PREPROCESSING.out.versions) 
 
     //
     // MODULES: ASV generation with DADA2
     //
-/*
     //run error model
     if ( !params.illumina_novaseq ) {
         DADA2_ERR ( ch_filt_reads )
@@ -418,6 +430,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_stats = DADA2_MERGE.out.dada2stats
     }
 
+/*
     //
     // SUBWORKFLOW / MODULES : Taxonomic classification with DADA2, SINTAX and/or QIIME2
     //
@@ -453,12 +466,12 @@ workflow AMPLISEQ_SIMPLIFIED {
         // Must have params:
         // - solved by '!params.multiregion' for skip_report
         // - solved in 'lib/WorkflowAmpliseq.groovy': skip_dada_taxonomy
-    } else {
+    } else {} */
         // forward results to downstream analysis if single region
         ch_dada2_fasta = DADA2_MERGE.out.fasta
         ch_dada2_asv = DADA2_MERGE.out.asv
-    }
-
+    
+/*
     //
     // MODULE : ASV post-clustering with VSEARCH
     //
@@ -487,7 +500,9 @@ workflow AMPLISEQ_SIMPLIFIED {
     } else {
         ch_unfiltered_fasta = ch_dada2_fasta
     }
-
+*/
+       ch_unfiltered_fasta = ch_dada2_fasta
+/*
     //
     // Modules : Filter rRNA
     //
@@ -521,7 +536,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_barrnapsummary = Channel.empty()
         ch_dada2_fasta = ch_unfiltered_fasta
     }
-
+*/
     //
     // Modules : amplicon length filtering
     //
@@ -535,7 +550,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         // Make sure that not all sequences were removed
         ch_dada2_fasta.subscribe { if (it.countLines() == 0) error("ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs, please adjust settings.") }
     }
-
+/*
     //
     // Modules : Filtering based on codons in an open reading frame
     //
@@ -572,20 +587,23 @@ workflow AMPLISEQ_SIMPLIFIED {
         FILTER_LEN_ITSX ( ITSX_CUTASV.out.fasta, [] )
         ch_fasta = FILTER_LEN_ITSX.out.fasta
     }
+*/
+        ch_full_fasta = ch_dada2_fasta    
+        ch_fasta = ch_dada2_fasta
+
+
+
 
     //
     // SUBWORKFLOW / MODULES : Taxonomic classification with DADA2, SINTAX and/or QIIME2
     //
 
     //DADA2
-    if (!params.skip_taxonomy && !params.skip_dada_taxonomy) {
-        if (!params.dada_ref_tax_custom) {
-            //standard ref taxonomy input from conf/ref_databases.config
-            FORMAT_TAXONOMY ( ch_dada_ref_taxonomy.collect(), val_dada_ref_taxonomy )
-            ch_versions = ch_versions.mix(FORMAT_TAXONOMY.out.versions)
-            ch_assigntax = FORMAT_TAXONOMY.out.assigntax
-            ch_addspecies = FORMAT_TAXONOMY.out.addspecies
-        }
+        FORMAT_TAXONOMY ( ch_dada_ref_taxonomy.collect(), val_dada_ref_taxonomy )
+        ch_versions = ch_versions.mix(FORMAT_TAXONOMY.out.versions)
+        ch_assigntax = FORMAT_TAXONOMY.out.assigntax
+        ch_addspecies = FORMAT_TAXONOMY.out.addspecies
+        
         DADA2_TAXONOMY_WF (
             ch_assigntax,
             ch_addspecies,
@@ -596,10 +614,8 @@ workflow AMPLISEQ_SIMPLIFIED {
         ).tax.set { ch_dada2_tax }
         ch_versions = ch_versions.mix(DADA2_TAXONOMY_WF.out.versions)
         ch_tax_for_phyloseq = ch_tax_for_phyloseq.mix ( ch_dada2_tax.map { it = [ "dada2", file(it) ] } )
-    } else {
-        ch_dada2_tax = Channel.empty()
-    }
 
+/*
     //Kraken2
     if (!params.skip_taxonomy && (params.kraken2_ref_taxonomy || params.kraken2_ref_tax_custom) ) {
         KRAKEN2_TAXONOMY_WF (
@@ -825,10 +841,21 @@ workflow AMPLISEQ_SIMPLIFIED {
     } else {
         ch_tsv = ch_dada2_asv
     }
+*/
 
+    // Yi added
+    ch_kraken2_tax = Channel.empty()
+    ch_sintax_tax = Channel.empty()
+    ch_pplace_tax = Channel.empty()
+    ch_qiime2_tax = Channel.empty()
+    ch_tsv = ch_dada2_asv
+
+/*
     //
     // MODULE: Predict functional potential of a bacterial community from marker genes with Picrust2
     //
+    params.picrust=false //temporary
+    run_qiime2=false //temporary
     if ( params.picrust ) {
         if ( run_qiime2 && !params.skip_abundance_tables && ( params.dada_ref_taxonomy || params.qiime_ref_taxonomy || params.qiime_ref_tax_custom || params.classifier || params.sintax_ref_taxonomy || params.kraken2_ref_taxonomy || params.kraken2_ref_tax_custom ) && !params.skip_taxonomy ) {
             PICRUST ( QIIME2_EXPORT.out.abs_fasta, QIIME2_EXPORT.out.abs_tsv, "QIIME2", "This Picrust2 analysis is based on filtered reads from QIIME2" )
@@ -837,7 +864,6 @@ workflow AMPLISEQ_SIMPLIFIED {
         }
         ch_versions = ch_versions.mix(PICRUST.out.versions.ifEmpty(null))
     }
-
     //
     // MODULE: Export data in SBDI's (Swedish biodiversity infrastructure) format
     //
@@ -853,6 +879,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         }
         ch_versions = ch_versions.mix(SBDIEXPORT.out.versions.first())
     }
+
 
     //
     // SUBWORKFLOW: Create phyloseq objects
@@ -872,7 +899,18 @@ workflow AMPLISEQ_SIMPLIFIED {
             run_qiime2
         )
         ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
-    }
+    }*/
+        
+        ch_tree_for_phyloseq = []
+
+        PHYLOSEQ_WORKFLOW (
+            ch_tax_for_phyloseq,
+            ch_tsv,
+            ch_metadata.ifEmpty([]),
+            ch_tree_for_phyloseq,
+            false//replacing: run_qiime2
+        )
+        ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
 
     //
     // Collate and save software versions
@@ -885,7 +923,8 @@ workflow AMPLISEQ_SIMPLIFIED {
             newLine: true
         ).set { ch_collated_versions }
 
-
+    ch_multiqc_report_list = Channel.empty()
+/*
     //
     // MODULE: MultiQC
     //
@@ -932,7 +971,10 @@ workflow AMPLISEQ_SIMPLIFIED {
     } else {
         ch_multiqc_report_list = Channel.empty()
     }
+*/
+    ch_multiqc_report_list = Channel.empty()
 
+/*
     //
     // MODULE: Summary Report
     //
@@ -945,9 +987,9 @@ workflow AMPLISEQ_SIMPLIFIED {
             ch_metadata.ifEmpty( [] ),
             params.input ? file(params.input) : [], // samplesheet input
             ch_input_fasta.ifEmpty( [] ), // fasta input
-            !params.input_fasta && !params.skip_fastqc && !params.skip_multiqc ? MULTIQC.out.plots : [], //.collect().flatten().collectFile(name: "fastqc_per_sequence_quality_scores_plot.svg")
+            [],//ampliseq original: !params.input_fasta && !params.skip_fastqc && !params.skip_multiqc ? MULTIQC.out.plots : [], //.collect().flatten().collectFile(name: "fastqc_per_sequence_quality_scores_plot.svg")
             !params.skip_cutadapt ? CUTADAPT_WORKFLOW.out.summary.collect().ifEmpty( [] ) : [],
-            find_truncation_values,
+            false,//replacing find_truncation_values,
             DADA2_PREPROCESSING.out.args.first().ifEmpty( [] ),
             !params.skip_dada_quality ? DADA2_PREPROCESSING.out.qc_svg.ifEmpty( [] ) : [],
             !params.skip_dada_quality ? DADA2_PREPROCESSING.out.qc_svg_preprocessed.ifEmpty( [] ) : [],
@@ -970,14 +1012,14 @@ workflow AMPLISEQ_SIMPLIFIED {
             DADA2_MERGE.out.dada2asv.ifEmpty( [] ),
             DADA2_MERGE.out.dada2stats.ifEmpty( [] ),
             params.vsearch_cluster ? FILTER_CLUSTERS.out.asv.ifEmpty( [] ) : [],
-            !params.skip_barrnap ? BARRNAPSUMMARY.out.summary.ifEmpty( [] ) : [],
+            [], // replacing: !params.skip_barrnap ? BARRNAPSUMMARY.out.summary.ifEmpty( [] ) : [],
             params.filter_ssu ? FILTER_SSU.out.stats.ifEmpty( [] ) : [],
             params.filter_ssu ? FILTER_SSU.out.fasta.ifEmpty( [] ) : [],
             params.min_len_asv || params.max_len_asv ? FILTER_LEN_ASV.out.stats.ifEmpty( [] ) : [],
             params.min_len_asv || params.max_len_asv ? FILTER_LEN_ASV.out.len_orig.ifEmpty( [] ) : [],
             params.filter_codons ? FILTER_CODONS.out.fasta.ifEmpty( [] ) : [],
             params.filter_codons ? FILTER_CODONS.out.stats.ifEmpty( [] ) : [],
-            params.cut_its != "none" ? ITSX_CUTASV.out.summary.ifEmpty( [] ) : [],
+            [],//replacing: params.cut_its != "none" ? ITSX_CUTASV.out.summary.ifEmpty( [] ) : [],
             !params.skip_taxonomy && params.dada_ref_taxonomy && !params.skip_dada_taxonomy ? ch_dada2_tax.ifEmpty( [] ) : [],
             !params.skip_taxonomy && params.dada_ref_taxonomy && !params.skip_dada_taxonomy ? DADA2_TAXONOMY_WF.out.cut_tax.ifEmpty( [[],[]] ) : [[],[]],
             !params.skip_taxonomy && params.sintax_ref_taxonomy ? ch_sintax_tax.ifEmpty( [] ) : [],
@@ -1005,7 +1047,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         )
         ch_versions    = ch_versions.mix(SUMMARY_REPORT.out.versions)
     }
-
+*/
     //
     // Save input files in results folder
     //
@@ -1029,7 +1071,6 @@ workflow AMPLISEQ_SIMPLIFIED {
     emit:
     multiqc_report = ch_multiqc_report_list      // MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
-*/
 }
 
 /*

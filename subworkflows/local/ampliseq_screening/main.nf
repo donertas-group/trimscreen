@@ -14,35 +14,19 @@ workflow AMPLISEQ_SCREENING {
     .splitCsv(header: true, sep: ',')
     .map { row -> tuple(row.runID, row.trunclenf, row.trunclenr) }
 
-    AMPLISEQ_SIMPLIFIED(ch_samplesheet, ch_params)
+    /*
+    ch_samplesheet.combine(ch_params).map{ meta, reads, runID, trunclenf, trunclenr ->
+        def new_meta = meta.clone()  // Clone meta to avoid mutating the original object
+        new_meta.sample = meta.id
+        new_meta.id = "run_${trunclenf}${trunclenr}.${meta.id}"  // Create new sample field with concatenated value
+        tuple(new_meta + [runID: runID], reads, ['FW', trunclenf], ['RV', trunclenr])
+    }.set{ ch_trimmed_reads }*/
+
+
+     AMPLISEQ_SIMPLIFIED(ch_samplesheet, 250,250) 
+    
 }
 
-/* Subworkflow
-workflow AMPLISEQ_SIMPLE {
-    take:
-    ch_params
-
-    main:
-    PROCESS_1(ch_params) | view()
-    // PROCESS_2(PROCESS_1.out)
-
-    //emit:
-    // Define your outputs here
-}
-
-process PROCESS_1 {
-    input:
-    tuple val(runID), val(trunclenf), val(trunclenr) // ... more parameters
-
-    output:
-    stdout
-
-    script:
-    """
-    echo "$runID $trunclenf $trunclenr"
-    """
-}
-*/
 process GENERATE_PARAMS {
 
     def out_path = file(params.outdir).toString() + '/generate_params/'

@@ -5,13 +5,13 @@
 include { CUTADAPT as CUTADAPT_TAXONOMY  } from '../../../modules/nf-core/cutadapt/main'
 include { VSEARCH_USEARCHGLOBAL          } from '../../../modules/nf-core/vsearch/usearchglobal/main'
 
-include { DADA2_TAXONOMY                               } from '../../../modules/local/dada2_taxonomy'
-include { DADA2_ADDSPECIES                             } from '../../../modules/local/dada2_addspecies'
-include { FORMAT_TAXRESULTS as FORMAT_TAXRESULTS_STD   } from '../../../modules/local/format_taxresults'
-include { FORMAT_TAXRESULTS as FORMAT_TAXRESULTS_ADDSP } from '../../../modules/local/format_taxresults'
-include { ASSIGNSH                                     } from '../../../modules/local/assignsh'
+include { DADA2_TAXONOMY                               } from '../../../modules/local/ampliseq/dada2_taxonomy'
+include { DADA2_ADDSPECIES                             } from '../../../modules/local/ampliseq/dada2_addspecies'
+include { FORMAT_TAXRESULTS as FORMAT_TAXRESULTS_STD   } from '../../../modules/local/ampliseq/format_taxresults'
+include { FORMAT_TAXRESULTS as FORMAT_TAXRESULTS_ADDSP } from '../../../modules/local/ampliseq/format_taxresults'
+include { ASSIGNSH                                     } from '../../../modules/local/ampliseq/assignsh'
 
-include { makeComplement                 } from '../../subworkflows/local/utils_nfcore_ampliseq_pipeline'
+include { makeComplement                 } from '../../../subworkflows/local/ampliseq/utils_nfcore_ampliseq_pipeline'
 
 workflow DADA2_TAXONOMY_WF {
     take:

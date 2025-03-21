@@ -2,8 +2,8 @@
  * Create phyloseq objects
  */
 
-include { PHYLOSEQ                                } from '../../modules/local/phyloseq'
-include { PHYLOSEQ_INASV                          } from '../../modules/local/phyloseq_inasv'
+include { PHYLOSEQ                                } from '../../../modules/local/ampliseq/phyloseq'
+include { PHYLOSEQ_INASV                          } from '../../../modules/local/ampliseq/phyloseq_inasv'
 
 workflow PHYLOSEQ_WORKFLOW {
     take:
