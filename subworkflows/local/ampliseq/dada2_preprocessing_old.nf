@@ -10,10 +10,35 @@ include { DADA2_QUALITY as DADA2_QUALITY2 } from '../../../modules/local/amplise
 workflow DADA2_PREPROCESSING {
     take:
     ch_trimmed_reads
+    ch_params
+
+    main:
+    ch_versions_dada2_preprocessing = Channel.empty()
+
+    ch_trimmed_reads
+        .map { meta, reads -> [ reads[0] ] }
+        .collect()
+        .map { reads -> [ "FW", reads ] }
+        .set { ch_all_trimmed_fw }
+    ch_trimmed_reads
+        .map { meta, reads -> [ reads[1] ] }
+        .collect()
+        .map { reads -> [ "RV", reads ] }
+        .set { ch_all_trimmed_rv }
+    ch_all_trimmed_fw
+        .mix ( ch_all_trimmed_rv )
+        .set { ch_all_trimmed_reads }
+
+    single_end = false
+    find_truncation_values = false
+
+    /*
+    take:
+    ch_trimmed_reads
     single_end
     find_truncation_values
-    //trunclenf
-    //trunclenr
+    trunclenf
+    trunclenr
 
     main:
     ch_versions_dada2_preprocessing = Channel.empty()
@@ -40,17 +65,17 @@ workflow DADA2_PREPROCESSING {
             .mix ( ch_all_trimmed_rv )
             .set { ch_all_trimmed_reads }
     }
-
+*/
     ch_DADA2_QUALITY1_SVG = Channel.empty()
-    if ( false ){//!params.skip_dada_quality ) {
+    if ( !params.skip_dada_quality ) {
         DADA2_QUALITY1 ( ch_all_trimmed_reads.dump(tag: 'into_dada2_quality') )
         ch_versions_dada2_preprocessing = ch_versions_dada2_preprocessing.mix(DADA2_QUALITY1.out.versions)
         DADA2_QUALITY1.out.warning.subscribe { if ( it.baseName.toString().startsWith("WARNING") ) log.warn it.baseName.toString().replace("WARNING ","DADA2_QUALITY1: ") }
         ch_DADA2_QUALITY1_SVG = DADA2_QUALITY1.out.svg
     }
-
+/*
     //find truncation values in case they are not supplied
-    /*if ( false){//find_truncation_values ) {
+    if ( find_truncation_values ) {
         TRUNCLEN ( DADA2_QUALITY1.out.tsv )
         TRUNCLEN.out.trunc
             .toSortedList()
@@ -68,13 +93,17 @@ workflow DADA2_PREPROCESSING {
             .toSortedList()
             .set { ch_trunc }
     }
-
-
     ch_trimmed_reads.combine(ch_trunc).set { ch_trimmed_reads }
+
 */
 
-    ch_trimmed_reads.map{ meta, reads -> [meta, reads, ['FW', meta.trunclenf], ['RV', meta.trunclenr]]}
-    .set {ch_trimmed_reads}
+    ch_trimmed_reads.combine(ch_params).map{ meta, reads, runID, trunclenf, trunclenr ->
+        def new_meta = meta.clone()  // Clone meta to avoid mutating the original object
+        new_meta.sample = meta.id
+        new_meta.id = "run_${trunclenf}${trunclenr}.${meta.id}"  // Create new sample field with concatenated value
+        tuple(new_meta + [runID: runID], reads, ['FW', trunclenf], ['RV', trunclenr])
+    }.set{ ch_trimmed_reads }
+
 
     //filter reads
     DADA2_FILTNTRIM ( ch_trimmed_reads.dump(tag: 'into_filtntrim')  )
@@ -87,9 +116,7 @@ workflow DADA2_PREPROCESSING {
             passed: true
         }
         .set { ch_dada2_filtntrim_results }
-    
     ch_dada2_filtntrim_results.passed.set { ch_dada2_filtntrim_results_passed }
-    
     ch_dada2_filtntrim_results.failed
         .map { meta, reads, logs, args -> [ meta.id ] }
         .collect()
@@ -138,7 +165,7 @@ workflow DADA2_PREPROCESSING {
     }
 
     ch_DADA2_QUALITY2_SVG = Channel.empty()
-    if (false){// !params.skip_dada_quality ) {
+    if ( !params.skip_dada_quality ) {
         DADA2_QUALITY2 ( ch_all_preprocessed_reads.dump(tag: 'into_dada2_quality2') )
         ch_versions_dada2_preprocessing = ch_versions_dada2_preprocessing.mix(DADA2_QUALITY2.out.versions)
         DADA2_QUALITY2.out.warning.subscribe { if ( it.baseName.toString().startsWith("WARNING") ) log.warn it.baseName.toString().replace("WARNING ","DADA2_QUALITY2: ") }

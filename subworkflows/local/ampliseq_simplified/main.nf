@@ -127,6 +127,9 @@ tax_agglom_max = params.tax_agglom_max
 
 */
 
+// Set non-params Variables
+single_end = false
+
 //use custom taxlevels from --dada_assign_taxlevels or database specific taxlevels if specified in conf/ref_databases.config
 if ( params.dada_ref_taxonomy ) {
     taxlevels = params.dada_assign_taxlevels ? "${params.dada_assign_taxlevels}" :
@@ -193,7 +196,7 @@ include { NOVASEQ_ERR                                } from '../../../modules/lo
 include { DADA2_DENOISING                            } from '../../../modules/local/ampliseq/dada2_denoising'
 include { DADA2_RMCHIMERA                            } from '../../../modules/local/ampliseq/dada2_rmchimera'
 include { DADA2_STATS                                } from '../../../modules/local/ampliseq/dada2_stats'
-include { DADA2_MERGE                                } from '../../../modules/local/ampliseq/dada2_merge'
+include { DADA2_MERGE                                } from '../../../modules/local/ampliseq/dada2_merge_modified'
 include { DADA2_SPLITREGIONS                         } from '../../../modules/local/ampliseq/dada2_splitregions'
 include { MERGE_STATS as MERGE_STATS_STD            } from '../../../modules/local/ampliseq/merge_stats'
 include { FILTER_SSU                                } from '../../../modules/local/ampliseq/filter_ssu'
@@ -235,9 +238,8 @@ include { FILTER_CLUSTERS               } from '../../../modules/ampliseq/filter
 //
 
 include { PARSE_INPUT                   } from '../../../subworkflows/local/ampliseq/parse_input'
-include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/local/ampliseq/cutadapt_workflow'
-include { DADA2_PREPROCESSING  } from '../../../subworkflows/local/ampliseq/dada2_preprocessing'
-//include { DADA2_PREPROCESSING  } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
+include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/local/ampliseq/cutadapt_workflow_modified'
+include { DADA2_PREPROCESSING  } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
 include { DADA2_TAXONOMY_WF             } from '../../../subworkflows/local/ampliseq/dada2_taxonomy_wf'
 include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/local/ampliseq/phyloseq_workflow'
 /*
@@ -271,11 +273,10 @@ include { makeComplement         } from '../../../subworkflows/local/ampliseq/ut
 workflow AMPLISEQ_SIMPLIFIED {
     take:
     ch_samplesheet
-    trunclenf
-    trunclenr
+    //trunclenf
+    //trunclenr
 
     main:
-
     //
     // Create input channels
     //
@@ -284,9 +285,10 @@ workflow AMPLISEQ_SIMPLIFIED {
     ch_input_fasta = Channel.empty()
 
     ch_input_reads = ch_samplesheet
-    .map{ meta, readfw, readrv, _ -> return [meta, [readfw, readrv]]} // ignoring long_read option which is enabled in detaxizer
-/*        
+    .map{ meta, readfw, readrv, _ -> 
         meta.single_end = single_end.toBoolean()
+        return [meta, [readfw, readrv]]} // ignoring long_read option which is enabled in detaxizer
+/*        
         def reads = single_end ? readfw : [readfw,readrv]
         if ( !meta.single_end && !readrv ) { error("Entry `reverseReads` is missing in $params.input for $meta.sample, either correct the samplesheet or use `--single_end`, `--pacbio`, or `--iontorrent`") } // make sure that reverse reads are present when single_end isn't specified
         if ( !meta.single_end && ( readfw.getSimpleName() == meta.sample || readrv.getSimpleName() == meta.sample ) ) { error("Entry `sampleID` cannot be identical to simple name of `forwardReads` or `reverseReads`, please change `sampleID` in $params.input for sample $meta.sample") } // sample name and any file name without extensions aren't identical, because rename_raw_data_files.nf would forward 3 files (2 renamed +1 input) instead of 2 in that case
@@ -303,7 +305,7 @@ workflow AMPLISEQ_SIMPLIFIED {
             def meta = info +
                 [region: null, region_length: null] +
                 [fw_primer: params.FW_primer, rv_primer: params.RV_primer] +
-                [id: info.id] +
+                //[id: info.id] +
                 [fw_primer_revcomp: params.FW_primer ? makeComplement(params.FW_primer.reverse()) : null] +
                 [rv_primer_revcomp: params.RV_primer ? makeComplement(params.RV_primer.reverse()) : null]
             return [ meta, reads ] }
@@ -336,7 +338,6 @@ workflow AMPLISEQ_SIMPLIFIED {
 
     RENAME_RAW_DATA_FILES ( ch_reads )
     ch_versions = ch_versions.mix(RENAME_RAW_DATA_FILES.out.versions.first())
-    ch_versions.view()
 /*
     //
     // MODULE: Run FastQC
@@ -361,31 +362,26 @@ workflow AMPLISEQ_SIMPLIFIED {
     } else {
         ch_trimmed_reads = RENAME_RAW_DATA_FILES.out.fastq
     }
-    
+
 
     //
     // SUBWORKFLOW: Read preprocessing & QC plotting with DADA2
     //
-    /*/ In this modified subworkflow of dada2_preprocessing, runID is incorporated into meta.id and original meta.id is renamed to meta.sample
-    DADA2_PREPROCESSING (
-        ch_trimmed_reads,
-        ch_params
-    ).reads.set { ch_filt_reads }*/
     DADA2_PREPROCESSING (
         ch_trimmed_reads, 
         false, // replacing single_end
-        false, // replacing find_truncation_values
-        trunclenf, 
-        trunclenr
+        false // replacing find_truncation_values
+        //trunclenr
+        //trunclenr
     ).reads.set { ch_filt_reads }
 
     ch_versions = ch_versions.mix(DADA2_PREPROCESSING.out.versions) 
-
+    
     //
     // MODULES: ASV generation with DADA2
     //
     //run error model
-    if ( !params.illumina_novaseq ) {
+    if ( true ){//!params.illumina_novaseq ) {
         DADA2_ERR ( ch_filt_reads )
         ch_errormodel = DADA2_ERR.out.errormodel
         ch_versions = ch_versions.mix(DADA2_ERR.out.versions)
@@ -406,6 +402,8 @@ workflow AMPLISEQ_SIMPLIFIED {
     DADA2_RMCHIMERA ( DADA2_DENOISING.out.seqtab )
     ch_versions = ch_versions.mix(DADA2_RMCHIMERA.out.versions)
 
+
+
     //group by sequencing run & group by meta
     DADA2_PREPROCESSING.out.logs
         .join( DADA2_DENOISING.out.denoised )
@@ -414,11 +412,20 @@ workflow AMPLISEQ_SIMPLIFIED {
         .set { ch_track_numbers }
     DADA2_STATS ( ch_track_numbers )
     ch_versions = ch_versions.mix(DADA2_STATS.out.versions)
+    DADA2_STATS.out[0].view()
 
-    //merge if several runs, otherwise just publish
+    
+    /*//merge if several runs, otherwise just publish
     DADA2_MERGE (
         DADA2_STATS.out.stats.map { meta, stats -> stats }.collect(),
-        DADA2_RMCHIMERA.out.rds.map { meta, rds -> rds }.collect() )
+        DADA2_RMCHIMERA.out.rds.map { meta, rds -> rds }.collect() )*/
+    
+    // modified: process each run separately
+    DADA2_MERGE(
+        DADA2_STATS.out.stats.map { meta, stats -> tuple(meta, stats) }, 
+        DADA2_RMCHIMERA.out.rds.map { meta, rds -> tuple(meta, rds) }
+    )
+
     ch_versions = ch_versions.mix(DADA2_MERGE.out.versions)
 
     //merge cutadapt_summary and dada_stats files

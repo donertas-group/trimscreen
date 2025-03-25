@@ -3,10 +3,10 @@
  */
 
 include { CUTADAPT as CUTADAPT_BASIC                        } from '../../../modules/nf-core/cutadapt/main'
-include { CUTADAPT as CUTADAPT_READTHROUGH                  } from '../../../modules/nf-core/cutadapt/main'
-include { CUTADAPT as CUTADAPT_DOUBLEPRIMER                 } from '../../../modules/nf-core/cutadapt/main'
+//include { CUTADAPT as CUTADAPT_READTHROUGH                  } from '../../../modules/nf-core/cutadapt/main'
+//include { CUTADAPT as CUTADAPT_DOUBLEPRIMER                 } from '../../../modules/nf-core/cutadapt/main'
 include { CUTADAPT_SUMMARY as CUTADAPT_SUMMARY_STD          } from '../../../modules/local/ampliseq/cutadapt_summary'
-include { CUTADAPT_SUMMARY as CUTADAPT_SUMMARY_DOUBLEPRIMER } from '../../../modules/local/ampliseq/cutadapt_summary'
+//include { CUTADAPT_SUMMARY as CUTADAPT_SUMMARY_DOUBLEPRIMER } from '../../../modules/local/ampliseq/cutadapt_summary'
 include { CUTADAPT_SUMMARY_MERGE                            } from '../../../modules/local/ampliseq/cutadapt_summary_merge'
 
 workflow CUTADAPT_WORKFLOW {
@@ -24,6 +24,7 @@ workflow CUTADAPT_WORKFLOW {
             info, log ->
                 def meta = [:]
                 meta.single_end = info.single_end
+                meta.runID = info.runID // add runID to meta
                 [ meta, log ] }
         .groupTuple(by: 0 )
         .set { ch_cutadapt_logs }

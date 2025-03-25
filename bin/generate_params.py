@@ -43,7 +43,8 @@ def main():
     combinations = list(itertools.product(f_values, r_values))
     
     # Assign unique 8-digit runIDs
-    run_data = [{"runID": str(uuid.uuid4())[:8], "trunclenf": f, "trunclenr": r} for f, r in combinations]
+    #run_data = [{"runID": str(uuid.uuid4())[:8], "trunclenf": f, "trunclenr": r} for f, r in combinations]
+    run_data = [{"runID": f"run_{f}{r}", "trunclenf": f, "trunclenr": r} for f, r in combinations]
 
     #os.makedirs(os.path.join(args.outdir, "generate_params"), exist_ok=True)  # Ensure output directory exists
     output_path = os.path.join(args.outdir, "summary_params_settings.csv")

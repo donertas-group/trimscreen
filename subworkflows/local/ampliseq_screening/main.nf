@@ -20,11 +20,23 @@ workflow AMPLISEQ_SCREENING {
         new_meta.sample = meta.id
         new_meta.id = "run_${trunclenf}${trunclenr}.${meta.id}"  // Create new sample field with concatenated value
         tuple(new_meta + [runID: runID], reads, ['FW', trunclenf], ['RV', trunclenr])
-    }.set{ ch_trimmed_reads }*/
+    }.set{ ch_samplesheet_ }*/
 
-
-     AMPLISEQ_SIMPLIFIED(ch_samplesheet, 250,250) 
+    ch_samplesheet.combine(ch_params)
+    //.map{meta, read1, read2, _, runID, trunclenf, trunclenr -> tuple([meta+[runID:runID], read1, read2, _], trunclenf, trunclenr)}
+    //.set{ ch_samplesheet_w_params }
+    .map { meta, read1, read2, _, runID, trunclenf, trunclenr -> 
+    def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr]  
+    tuple(new_meta, read1, read2, _)}
+    .set{ ch_samplesheet_w_params }
     
+
+    AMPLISEQ_SIMPLIFIED(ch_samplesheet_w_params)
+    /* AMPLISEQ_SIMPLIFIED(
+         ch_samplesheet_w_params.map{ sample, trunclenf, trunclenr -> sample},
+         ch_samplesheet_w_params.map{ sample, trunclenf, trunclenr -> trunclenf},
+         ch_samplesheet_w_params.map{ sample, trunclenf, trunclenr -> trunclenr}) 
+    */
 }
 
 process GENERATE_PARAMS {
