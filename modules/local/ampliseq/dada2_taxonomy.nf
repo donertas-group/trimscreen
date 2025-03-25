@@ -1,5 +1,5 @@
 process DADA2_TAXONOMY {
-    tag "${fasta},${database}"
+    tag "${fasta}, ${database}, ${meta.run}"
     label 'process_high'
 
     conda "bioconda::bioconductor-dada2=1.30.0"
@@ -8,7 +8,7 @@ process DADA2_TAXONOMY {
         'biocontainers/bioconductor-dada2:1.30.0--r43hf17093f_0' }"
 
     input:
-    path(fasta)
+    tuple val(meta), path(fasta)
     path(database)
     val(outfile)
     val(taxlevels_input)

@@ -13,10 +13,10 @@ process DADA2_MERGE {
     tuple val(meta), path(rds)
 
     output:
-    path( "DADA2_stats.tsv" ), emit: dada2stats
+    tuple val(meta), path( "DADA2_stats.tsv" ), emit: dada2stats
     path( "DADA2_table.tsv" ), emit: dada2asv
     path( "ASV_table.tsv" )  , emit: asv
-    path( "ASV_seqs.fasta" ) , emit: fasta
+    tuple val(meta), path( "ASV_seqs.fasta" ) , emit: fasta
     path( "DADA2_table.rds" ), emit: rds
     path "versions.yml"      , emit: versions
 

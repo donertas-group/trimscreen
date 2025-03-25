@@ -198,7 +198,7 @@ include { DADA2_RMCHIMERA                            } from '../../../modules/lo
 include { DADA2_STATS                                } from '../../../modules/local/ampliseq/dada2_stats'
 include { DADA2_MERGE                                } from '../../../modules/local/ampliseq/dada2_merge_modified'
 include { DADA2_SPLITREGIONS                         } from '../../../modules/local/ampliseq/dada2_splitregions'
-include { MERGE_STATS as MERGE_STATS_STD            } from '../../../modules/local/ampliseq/merge_stats'
+include { MERGE_STATS as MERGE_STATS_STD            } from '../../../modules/local/ampliseq/merge_stats_modified'
 include { FILTER_SSU                                } from '../../../modules/local/ampliseq/filter_ssu'
 include { FILTER_LEN as FILTER_LEN_ASV              } from '../../../modules/local/ampliseq/filter_len'
 include { FILTER_LEN as FILTER_LEN_ITSX             } from '../../../modules/local/ampliseq/filter_len'
@@ -412,7 +412,6 @@ workflow AMPLISEQ_SIMPLIFIED {
         .set { ch_track_numbers }
     DADA2_STATS ( ch_track_numbers )
     ch_versions = ch_versions.mix(DADA2_STATS.out.versions)
-    DADA2_STATS.out[0].view()
 
     
     /*//merge if several runs, otherwise just publish
@@ -428,15 +427,16 @@ workflow AMPLISEQ_SIMPLIFIED {
 
     ch_versions = ch_versions.mix(DADA2_MERGE.out.versions)
 
-    //merge cutadapt_summary and dada_stats files
+    //merge cutadapt_summary and dada_stats files. modified: write summary file by runs
     if (!params.skip_cutadapt) {
-        MERGE_STATS_STD (CUTADAPT_WORKFLOW.out.summary, DADA2_MERGE.out.dada2stats)
+        MERGE_STATS_STD (
+            CUTADAPT_WORKFLOW.out.summary, 
+            DADA2_MERGE.out.dada2stats )//.map { meta, dada2stats -> tuple(meta, dada2stats) }) // dada2stats is modified to contain meta as well
         ch_stats = MERGE_STATS_STD.out.tsv
         ch_versions = ch_versions.mix(MERGE_STATS_STD.out.versions)
     } else {
-        ch_stats = DADA2_MERGE.out.dada2stats
+        ch_stats = DADA2_MERGE.out.dada2stats.map { meta, dada2stats -> tuple(meta, dada2stats) }
     }
-
 /*
     //
     // SUBWORKFLOW / MODULES : Taxonomic classification with DADA2, SINTAX and/or QIIME2
@@ -610,7 +610,9 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_versions = ch_versions.mix(FORMAT_TAXONOMY.out.versions)
         ch_assigntax = FORMAT_TAXONOMY.out.assigntax
         ch_addspecies = FORMAT_TAXONOMY.out.addspecies
-        
+       
+        ch_fasta.take(0).view()
+ 
         DADA2_TAXONOMY_WF (
             ch_assigntax,
             ch_addspecies,

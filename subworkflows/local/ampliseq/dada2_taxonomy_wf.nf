@@ -57,7 +57,12 @@ workflow DADA2_TAXONOMY_WF {
     }
 
     //DADA2 assignTaxonomy
-    DADA2_TAXONOMY ( ch_fasta, ch_assigntax, ASV_tax_name + ".${val_dada_ref_taxonomy}.tsv", taxlevels )
+    DADA2_TAXONOMY ( 
+        ch_fasta, 
+        ch_assigntax, 
+        ASV_tax_name + ".${val_dada_ref_taxonomy}.tsv", 
+        taxlevels )
+
     ch_versions_dada_taxonomy = ch_versions_dada_taxonomy.mix(DADA2_TAXONOMY.out.versions)
     if (params.cut_its != "none") {
         FORMAT_TAXRESULTS_STD ( DADA2_TAXONOMY.out.tsv, ch_full_fasta, "ASV_tax.${val_dada_ref_taxonomy}.tsv" )
