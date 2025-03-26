@@ -241,7 +241,7 @@ include { PARSE_INPUT                   } from '../../../subworkflows/local/ampl
 include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/local/ampliseq/cutadapt_workflow_modified'
 include { DADA2_PREPROCESSING  } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
 include { DADA2_TAXONOMY_WF             } from '../../../subworkflows/local/ampliseq/dada2_taxonomy_wf'
-include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/local/ampliseq/phyloseq_workflow'
+include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/local/ampliseq/phyloseq_workflow_modified'
 /*
 include { QIIME2_PREPTAX                } from '../../../subworkflows/ampliseq/qiime2_preptax'
 include { QIIME2_TAXONOMY               } from '../../../subworkflows/ampliseq/qiime2_taxonomy'
@@ -427,7 +427,7 @@ workflow AMPLISEQ_SIMPLIFIED {
 
     ch_versions = ch_versions.mix(DADA2_MERGE.out.versions)
 
-    //merge cutadapt_summary and dada_stats files. modified: write summary file by runs
+    //merge cutadapt_summary and dada_stats files. modified: write summary files separately by runs
     if (!params.skip_cutadapt) {
         MERGE_STATS_STD (
             CUTADAPT_WORKFLOW.out.summary, 
@@ -435,7 +435,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_stats = MERGE_STATS_STD.out.tsv
         ch_versions = ch_versions.mix(MERGE_STATS_STD.out.versions)
     } else {
-        ch_stats = DADA2_MERGE.out.dada2stats.map { meta, dada2stats -> tuple(meta, dada2stats) }
+        ch_stats = DADA2_MERGE.out.dada2stats//.map { meta, dada2stats -> tuple(meta, dada2stats) }
     }
 /*
     //
@@ -476,7 +476,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     } else {} */
         // forward results to downstream analysis if single region
         ch_dada2_fasta = DADA2_MERGE.out.fasta
-        ch_dada2_asv = DADA2_MERGE.out.asv
+        ch_dada2_asv = DADA2_MERGE.out.asv.map { meta, asv -> tuple(meta, asv) }
     
 /*
     //
@@ -611,7 +611,6 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_assigntax = FORMAT_TAXONOMY.out.assigntax
         ch_addspecies = FORMAT_TAXONOMY.out.addspecies
        
-        ch_fasta.take(0).view()
  
         DADA2_TAXONOMY_WF (
             ch_assigntax,
@@ -622,8 +621,7 @@ workflow AMPLISEQ_SIMPLIFIED {
             taxlevels
         ).tax.set { ch_dada2_tax }
         ch_versions = ch_versions.mix(DADA2_TAXONOMY_WF.out.versions)
-        ch_tax_for_phyloseq = ch_tax_for_phyloseq.mix ( ch_dada2_tax.map { it = [ "dada2", file(it) ] } )
-
+        ch_tax_for_phyloseq = ch_tax_for_phyloseq.mix ( ch_dada2_tax.map {it = ["dada2", file(it) ] } )
 /*
     //Kraken2
     if (!params.skip_taxonomy && (params.kraken2_ref_taxonomy || params.kraken2_ref_tax_custom) ) {
@@ -909,12 +907,13 @@ workflow AMPLISEQ_SIMPLIFIED {
         )
         ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
     }*/
-        
-        ch_tree_for_phyloseq = []
 
+
+
+        ch_tree_for_phyloseq = []
         PHYLOSEQ_WORKFLOW (
-            ch_tax_for_phyloseq,
-            ch_tsv,
+            ch_tax_for_phyloseq, // comes from ch_dada2_tax.map { meta,it -> tuple (meta, "dada2", file(it) ) }
+            ch_tsv, // comes from ch_dada2_asv
             ch_metadata.ifEmpty([]),
             ch_tree_for_phyloseq,
             false//replacing: run_qiime2

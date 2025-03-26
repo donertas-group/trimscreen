@@ -2,7 +2,7 @@
  * Create phyloseq objects
  */
 
-include { PHYLOSEQ                                } from '../../../modules/local/ampliseq/phyloseq'
+include { PHYLOSEQ                                } from '../../../modules/local/ampliseq/phyloseq_modified'
 include { PHYLOSEQ_INASV                          } from '../../../modules/local/ampliseq/phyloseq_inasv'
 
 workflow PHYLOSEQ_WORKFLOW {
@@ -35,8 +35,10 @@ workflow PHYLOSEQ_WORKFLOW {
     } else {
         ch_phyloseq_inasv = ch_tsv
     }
+//ch_tax.view()
+//ch_tax.cross(ch_phyloseq_inasv).view()
 
-    PHYLOSEQ ( ch_tax.combine(ch_phyloseq_inasv), ch_phyloseq_inmeta, ch_phyloseq_intree )
+    PHYLOSEQ ( ch_tax.combine(ch_phyloseq_inasv).map { it.flatten() }, ch_phyloseq_inmeta, ch_phyloseq_intree )// flatten it as meta is included in ch_phyloseq_inasv
 
     emit:
     rds      = PHYLOSEQ.out.rds

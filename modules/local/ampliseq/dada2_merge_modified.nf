@@ -14,11 +14,11 @@ process DADA2_MERGE {
 
     output:
     tuple val(meta), path( "DADA2_stats.tsv" ), emit: dada2stats
-    path( "DADA2_table.tsv" ), emit: dada2asv
-    path( "ASV_table.tsv" )  , emit: asv
+    tuple val(meta), path( "DADA2_table.tsv" ), emit: dada2asv
+    tuple val(meta), path( "ASV_table.tsv" ),   emit: asv
     tuple val(meta), path( "ASV_seqs.fasta" ) , emit: fasta
-    path( "DADA2_table.rds" ), emit: rds
-    path "versions.yml"      , emit: versions
+    tuple val(meta), path( "DADA2_table.rds" ), emit: rds
+    path "versions.yml",                        emit: versions
 
     when:
     task.ext.when == null || task.ext.when

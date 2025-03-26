@@ -14,7 +14,7 @@ process DADA2_TAXONOMY {
     val(taxlevels_input)
 
     output:
-    path(outfile), emit: tsv
+    tuple val(meta), path(outfile), emit: tsv
     path( "ASV_tax.rds" ), emit: rds
     path "versions.yml"  , emit: versions
     path "*.args.txt"    , emit: args
