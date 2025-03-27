@@ -1,15 +1,19 @@
 process GENERATE_PARAMS {
+
+    def out_path = file(params.outdir).toString() + '/generate_params/'
+
+    publishDir "$out_path", mode: 'copy'
+
     input:
-    str truncrangef
-    str truncranger
-    val outdir
- 
+    val trunclenf_range
+    val trunclenr_range
+
     output:
-    path "${outdir}/generate_params/summary_params_settings.csv"
+    path "summary_params_settings.csv", emit: params_csv
 
     script:
-    """
-    generate_params.py --trunclenf_range $trunclenf_range --trunclenr_range $trunclenr_range --outdir $outdir
+    """ 
+    generate_params.py -f $trunclenf_range -r $trunclenr_range -o .
     """
 }
 

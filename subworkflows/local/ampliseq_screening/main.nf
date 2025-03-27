@@ -1,5 +1,7 @@
 include { AMPLISEQ_SIMPLIFIED                                       } from '../ampliseq_simplified/main'
+include { COMPARE_RUNS                                              } from '../compare_runs/main'
 
+include { GENERATE_PARAMS                                           } from '../../../modules/local/generate_params'
 
 workflow AMPLISEQ_SCREENING {
     take:
@@ -14,17 +16,8 @@ workflow AMPLISEQ_SCREENING {
     .splitCsv(header: true, sep: ',')
     .map { row -> tuple(row.runID, row.trunclenf, row.trunclenr) }
 
-    /*
-    ch_samplesheet.combine(ch_params).map{ meta, reads, runID, trunclenf, trunclenr ->
-        def new_meta = meta.clone()  // Clone meta to avoid mutating the original object
-        new_meta.sample = meta.id
-        new_meta.id = "run_${trunclenf}${trunclenr}.${meta.id}"  // Create new sample field with concatenated value
-        tuple(new_meta + [runID: runID], reads, ['FW', trunclenf], ['RV', trunclenr])
-    }.set{ ch_samplesheet_ }*/
 
     ch_samplesheet.combine(ch_params)
-    //.map{meta, read1, read2, _, runID, trunclenf, trunclenr -> tuple([meta+[runID:runID], read1, read2, _], trunclenf, trunclenr)}
-    //.set{ ch_samplesheet_w_params }
     .map { meta, read1, read2, _, runID, trunclenf, trunclenr -> 
     def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr]  
     tuple(new_meta, read1, read2, _)}
@@ -32,13 +25,24 @@ workflow AMPLISEQ_SCREENING {
     
 
     AMPLISEQ_SIMPLIFIED(ch_samplesheet_w_params)
-    /* AMPLISEQ_SIMPLIFIED(
-         ch_samplesheet_w_params.map{ sample, trunclenf, trunclenr -> sample},
-         ch_samplesheet_w_params.map{ sample, trunclenf, trunclenr -> trunclenf},
-         ch_samplesheet_w_params.map{ sample, trunclenf, trunclenr -> trunclenr}) 
-    */
-}
+    ch_stats = AMPLISEQ_SIMPLIFIED.out.runs_summary
+    ch_asv = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
+    ch_tax = AMPLISEQ_SIMPLIFIED.out.runs_asv_tax
 
+
+
+    if (true){//!params.skip_run_comparison) {
+        COMPARE_RUNS (
+        ch_stats,
+        ch_asv,
+        ch_tax
+        )  
+    }
+
+
+
+}
+/*
 process GENERATE_PARAMS {
 
     def out_path = file(params.outdir).toString() + '/generate_params/'
@@ -56,5 +60,5 @@ process GENERATE_PARAMS {
     """
     generate_params.py -f $trunclenf_range -r $trunclenr_range -o .
     """
-}
+}*/
 

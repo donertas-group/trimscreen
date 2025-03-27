@@ -199,12 +199,12 @@ include { DADA2_STATS                                } from '../../../modules/lo
 include { DADA2_MERGE                                } from '../../../modules/local/ampliseq/dada2_merge_modified'
 include { DADA2_SPLITREGIONS                         } from '../../../modules/local/ampliseq/dada2_splitregions'
 include { MERGE_STATS as MERGE_STATS_STD            } from '../../../modules/local/ampliseq/merge_stats_modified'
+include { MERGE_STATS as MERGE_STATS_FILTERSSU      } from '../../../modules/local/ampliseq/merge_stats_modified'
+include { MERGE_STATS as MERGE_STATS_FILTERLENASV   } from '../../../modules/local/ampliseq/merge_stats_modified'
+include { MERGE_STATS as MERGE_STATS_CODONS         } from '../../../modules/local/ampliseq/merge_stats_modified'
 include { FILTER_SSU                                } from '../../../modules/local/ampliseq/filter_ssu'
-include { FILTER_LEN as FILTER_LEN_ASV              } from '../../../modules/local/ampliseq/filter_len'
-include { FILTER_LEN as FILTER_LEN_ITSX             } from '../../../modules/local/ampliseq/filter_len'
-include { MERGE_STATS as MERGE_STATS_FILTERSSU      } from '../../../modules/local/ampliseq/merge_stats'
-include { MERGE_STATS as MERGE_STATS_FILTERLENASV   } from '../../../modules/local/ampliseq/merge_stats'
-include { MERGE_STATS as MERGE_STATS_CODONS         } from '../../../modules/local/ampliseq/merge_stats'
+include { FILTER_LEN as FILTER_LEN_ASV              } from '../../../modules/local/ampliseq/filter_len_modified'
+include { FILTER_LEN as FILTER_LEN_ITSX             } from '../../../modules/local/ampliseq/filter_len_modified'
 include { FILTER_CODONS                             } from '../../../modules/local/ampliseq/filter_codons'
 include { FORMAT_FASTAINPUT                         } from '../../../modules/local/ampliseq/format_fastainput'
 include { FORMAT_TAXONOMY                           } from '../../../modules/local/ampliseq/format_taxonomy'
@@ -432,7 +432,8 @@ workflow AMPLISEQ_SIMPLIFIED {
         MERGE_STATS_STD (
             CUTADAPT_WORKFLOW.out.summary, 
             DADA2_MERGE.out.dada2stats )//.map { meta, dada2stats -> tuple(meta, dada2stats) }) // dada2stats is modified to contain meta as well
-        ch_stats = MERGE_STATS_STD.out.tsv
+
+        ch_stats = MERGE_STATS_STD.out.tsv // MERGE_STATS.out.tsv is modified to contain meta
         ch_versions = ch_versions.mix(MERGE_STATS_STD.out.versions)
     } else {
         ch_stats = DADA2_MERGE.out.dada2stats//.map { meta, dada2stats -> tuple(meta, dada2stats) }
@@ -476,7 +477,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     } else {} */
         // forward results to downstream analysis if single region
         ch_dada2_fasta = DADA2_MERGE.out.fasta
-        ch_dada2_asv = DADA2_MERGE.out.asv.map { meta, asv -> tuple(meta, asv) }
+        ch_dada2_asv = DADA2_MERGE.out.asv//.map { meta, asv -> tuple(meta, asv) }
     
 /*
     //
@@ -554,9 +555,15 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_stats = MERGE_STATS_FILTERLENASV.out.tsv
         ch_dada2_fasta = FILTER_LEN_ASV.out.fasta
         ch_dada2_asv = FILTER_LEN_ASV.out.asv
-        // Make sure that not all sequences were removed
-        ch_dada2_fasta.subscribe { if (it.countLines() == 0) error("ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs, please adjust settings.") }
-    }
+        // Make sure that not all sequences were removed. Modified: report by run
+       //ch_dada2_fasta.subscribe { if (it.countLines() == 0) error("ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs, please adjust settings.") }
+        ch_dada2_fasta.subscribe { 
+            meta, file -> 
+            if (file.countLines() == 0) 
+                error("ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs for  ${meta.run}, please adjust settings.") 
+        }
+    
+}
 /*
     //
     // Modules : Filtering based on codons in an open reading frame
@@ -607,11 +614,11 @@ workflow AMPLISEQ_SIMPLIFIED {
 
     //DADA2
         FORMAT_TAXONOMY ( ch_dada_ref_taxonomy.collect(), val_dada_ref_taxonomy )
+
         ch_versions = ch_versions.mix(FORMAT_TAXONOMY.out.versions)
         ch_assigntax = FORMAT_TAXONOMY.out.assigntax
         ch_addspecies = FORMAT_TAXONOMY.out.addspecies
        
- 
         DADA2_TAXONOMY_WF (
             ch_assigntax,
             ch_addspecies,
@@ -621,7 +628,8 @@ workflow AMPLISEQ_SIMPLIFIED {
             taxlevels
         ).tax.set { ch_dada2_tax }
         ch_versions = ch_versions.mix(DADA2_TAXONOMY_WF.out.versions)
-        ch_tax_for_phyloseq = ch_tax_for_phyloseq.mix ( ch_dada2_tax.map {it = ["dada2", file(it) ] } )
+        //ch_tax_for_phyloseq = ch_tax_for_phyloseq.mix ( ch_dada2_tax.map {it = ["dada2", file(it) ] } )
+        ch_tax_for_phyloseq = ch_tax_for_phyloseq.mix ( ch_dada2_tax.map {meta, file -> [meta, "dada2", file ] } )
 /*
     //Kraken2
     if (!params.skip_taxonomy && (params.kraken2_ref_taxonomy || params.kraken2_ref_tax_custom) ) {
@@ -908,17 +916,17 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
     }*/
 
-
-
         ch_tree_for_phyloseq = []
         PHYLOSEQ_WORKFLOW (
-            ch_tax_for_phyloseq, // comes from ch_dada2_tax.map { meta,it -> tuple (meta, "dada2", file(it) ) }
-            ch_tsv, // comes from ch_dada2_asv
+            ch_tax_for_phyloseq, 
+            ch_tsv, 
             ch_metadata.ifEmpty([]),
             ch_tree_for_phyloseq,
             false//replacing: run_qiime2
         )
         ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
+
+
 
     //
     // Collate and save software versions
@@ -1023,8 +1031,8 @@ workflow AMPLISEQ_SIMPLIFIED {
             [], // replacing: !params.skip_barrnap ? BARRNAPSUMMARY.out.summary.ifEmpty( [] ) : [],
             params.filter_ssu ? FILTER_SSU.out.stats.ifEmpty( [] ) : [],
             params.filter_ssu ? FILTER_SSU.out.fasta.ifEmpty( [] ) : [],
-            params.min_len_asv || params.max_len_asv ? FILTER_LEN_ASV.out.stats.ifEmpty( [] ) : [],
-            params.min_len_asv || params.max_len_asv ? FILTER_LEN_ASV.out.len_orig.ifEmpty( [] ) : [],
+            params.min_len_asv || params.max_len_asv ? FILTER_LEN_ASV.out.stats.ifEmpty( [] ) : [], // if using this line, make sure to rm meta from FILTER_LEN_ASV.out.stats
+            params.min_len_asv || params.max_len_asv ? FILTER_LEN_ASV.out.len_orig.ifEmpty( [] ) : [],//if using this line, make sure to rm meta from FILTER_LEN_ASV.out.len_orig
             params.filter_codons ? FILTER_CODONS.out.fasta.ifEmpty( [] ) : [],
             params.filter_codons ? FILTER_CODONS.out.stats.ifEmpty( [] ) : [],
             [],//replacing: params.cut_its != "none" ? ITSX_CUTASV.out.summary.ifEmpty( [] ) : [],
@@ -1077,6 +1085,10 @@ workflow AMPLISEQ_SIMPLIFIED {
     }
 
     emit:
+    runs_summary   =  MERGE_STATS_STD.out.tsv
+    runs_asv_table =  DADA2_MERGE.out.asv
+    runs_asv_tax   =  DADA2_TAXONOMY_WF.out.tax
+
     multiqc_report = ch_multiqc_report_list      // MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
