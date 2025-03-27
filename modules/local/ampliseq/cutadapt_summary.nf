@@ -12,7 +12,7 @@ process CUTADAPT_SUMMARY {
     tuple val(meta), path(logs)
 
     output:
-    path("*_summary.tsv") , emit: tsv
+    tuple val(meta), path("*_summary.tsv") , emit: tsv
     path "versions.yml"   , emit: versions
 
     when:

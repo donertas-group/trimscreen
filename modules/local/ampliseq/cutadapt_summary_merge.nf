@@ -9,10 +9,10 @@ process CUTADAPT_SUMMARY_MERGE {
 
     input:
     val(action)
-    path(files)
+    tuple val(meta), path(files)
 
     output:
-    path("cutadapt_summary.tsv")      , emit: tsv
+    tuple val(meta), path("cutadapt_summary.tsv")      , emit: tsv
     path "versions.yml", optional:true, emit: versions
 
     when:

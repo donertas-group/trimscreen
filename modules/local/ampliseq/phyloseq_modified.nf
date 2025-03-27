@@ -8,7 +8,7 @@ process PHYLOSEQ {
         'biocontainers/bioconductor-phyloseq:1.46.0--r43hdfd78af_0' }"
 
     input:
-    tuple  val(prefix), path(tax_tsv), val(meta),path(otu_tsv)
+    tuple val(meta),val(prefix),path(tax_tsv),path(otu_tsv)
     path sam_tsv
     path tree
 
