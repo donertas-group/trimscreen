@@ -1,9 +1,5 @@
 process GENERATE_PARAMS {
 
-    def out_path = file(params.outdir).toString() + '/generate_params/'
-
-    publishDir "$out_path", mode: 'copy'
-
     input:
     val trunclenf_range
     val trunclenr_range
