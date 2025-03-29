@@ -52,6 +52,7 @@ process DADA2_MERGE {
     df <- t(ASVtab)
     colnames(df) <- gsub('_1.filt.fastq.gz', '', colnames(df))
     colnames(df) <- gsub('.filt.fastq.gz', '', colnames(df))
+    colnames(df) <- gsub('\\\\.run.*', '', colnames(df)) # added this line to remove run numbers in table
     df <- data.frame(sequence = rownames(df), df, check.names=FALSE)
     # Create an md5 sum of the sequences as ASV_ID and rearrange columns
     df\$ASV_ID <- sapply(df\$sequence, digest, algo='md5', serialize = FALSE)
