@@ -195,7 +195,7 @@ include { DADA2_ERR                                  } from '../../../modules/lo
 include { NOVASEQ_ERR                                } from '../../../modules/local/ampliseq/novaseq_err'
 include { DADA2_DENOISING                            } from '../../../modules/local/ampliseq/dada2_denoising'
 include { DADA2_RMCHIMERA                            } from '../../../modules/local/ampliseq/dada2_rmchimera'
-include { DADA2_STATS                                } from '../../../modules/local/ampliseq/dada2_stats'
+include { DADA2_STATS                                } from '../../../modules/local/ampliseq/dada2_stats_modified'
 include { DADA2_MERGE                                } from '../../../modules/local/ampliseq/dada2_merge_modified'
 include { DADA2_SPLITREGIONS                         } from '../../../modules/local/ampliseq/dada2_splitregions'
 include { MERGE_STATS as MERGE_STATS_STD            } from '../../../modules/local/ampliseq/merge_stats_modified'
@@ -362,7 +362,6 @@ workflow AMPLISEQ_SIMPLIFIED {
     } else {
         ch_trimmed_reads = RENAME_RAW_DATA_FILES.out.fastq
     }
-
 
     //
     // SUBWORKFLOW: Read preprocessing & QC plotting with DADA2
@@ -549,7 +548,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     // Modules : amplicon length filtering
     //
     if ( (params.min_len_asv || params.max_len_asv) && !params.multiregion ) {
-        FILTER_LEN_ASV ( ch_dada2_fasta, ch_dada2_asv.ifEmpty( [] ) )
+        FILTER_LEN_ASV ( ch_dada2_fasta.combine(ch_dada2_asv.ifEmpty( [] ),by:0 )) // combine the two channels as they both contain meta now
         ch_versions = ch_versions.mix(FILTER_LEN_ASV.out.versions)
         MERGE_STATS_FILTERLENASV ( ch_stats, FILTER_LEN_ASV.out.stats )
         ch_stats = MERGE_STATS_FILTERLENASV.out.tsv
@@ -1059,7 +1058,7 @@ workflow AMPLISEQ_SIMPLIFIED {
             run_qiime2 && params.ancombc_formula && params.metadata ? QIIME2_ANCOM.out.ancombc_formula.collect().ifEmpty( [] ) : [],
             params.picrust ? PICRUST.out.pathways.ifEmpty( [] ) : [],
             params.sbdiexport ? SBDIEXPORT.out.sbditables.mix(SBDIEXPORTREANNOTATE.out.sbdiannottables).collect().ifEmpty( [] ) : [],
-            !params.skip_taxonomy ? PHYLOSEQ_WORKFLOW.out.rds.map{info,rds -> [rds]}.collect().ifEmpty( [] ) : []
+            !params.skip_taxonomy ? PHYLOSEQ_WORKFLOW.out.rds.map{meta,info,rds -> [rds]}.collect().ifEmpty( [] ) : []//meta before info is newly added but not tested
         )
         ch_versions    = ch_versions.mix(SUMMARY_REPORT.out.versions)
     }

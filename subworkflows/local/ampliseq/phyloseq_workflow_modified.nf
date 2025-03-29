@@ -36,7 +36,9 @@ workflow PHYLOSEQ_WORKFLOW {
         ch_phyloseq_inasv = ch_tsv
     }
 
-    PHYLOSEQ ( ch_tax.combine(ch_phyloseq_inasv, by:0).map { it.flatten() }, ch_phyloseq_inmeta, ch_phyloseq_intree )// flatten it as meta is included in ch_phyloseq_inasv
+    ch_phyloseq_in = ch_tax.combine(ch_phyloseq_inasv, by:0).map { it.flatten() }// flatten it as meta is included in ch_phyloseq_inasv
+
+    PHYLOSEQ ( ch_phyloseq_in, ch_phyloseq_inmeta, ch_phyloseq_intree )
 
     emit:
     rds      = PHYLOSEQ.out.rds

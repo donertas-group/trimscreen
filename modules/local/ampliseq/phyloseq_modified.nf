@@ -8,13 +8,13 @@ process PHYLOSEQ {
         'biocontainers/bioconductor-phyloseq:1.46.0--r43hdfd78af_0' }"
 
     input:
-    tuple val(meta),val(prefix),path(tax_tsv),path(otu_tsv)
-    path sam_tsv
+    tuple val(meta), val(prefix), path(tax_tsv), path(otu_tsv)
+    path(sam_tsv)
     path tree
 
     output:
-    tuple val(prefix), path("*phyloseq.rds"), emit: rds
-    path "versions.yml"                     , emit: versions
+    tuple val(meta), val(prefix), path("*phyloseq.rds"),     emit: rds
+    path "versions.yml",                                     emit: versions
 
     when:
     task.ext.when == null || task.ext.when
