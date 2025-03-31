@@ -9,7 +9,7 @@ from skbio import diversity
 
 def parse_args(args=None):
 
-    parser = argparse.ArgumentParser(description="Compare runsi. Create table from multiple files.")
+    parser = argparse.ArgumentParser(description="Compare runs. Create table from multiple files.")
     parser.add_argument("-i", "--input", nargs="+", required=True, help="Input files")
 
     return parser.parse_args()
@@ -87,15 +87,15 @@ def process_run(summary_file, asv_file, tax_file, run, classifier_dir, ranks):
     res_df['run'] = run
 
     # Calculate and add more metrics from summary_table
-    if {'retained_percent', 'input_tax_filter', 'nonchim'}.issubset(summary_table.columns):
-        res_df['input_tax_filter'] = summary_table['input_tax_filter']
-        res_df['retained_percent'] = summary_table['retained_percent']
-        res_df['nonchim_percent'] = summary_table['nonchim'] / summary_table['merged'].replace(0, np.nan)
-        for rank in ranks:
-            #res_df[f'{rank}_pread'] = res_df[f'{rank}_nread'] / res_df['input_tax_filter'].replace(0, np.nan)
-            res_df[f'{rank}_pasv'] = res_df[f'{rank}_nasv'] / res_df['nasvs'].replace(0, np.nan)
+    if {'lenfilter_output'}.issubset(summary_table.columns):
+        res_df['DADA2_input'] = summary_table['DADA2_input']
+        res_df['retained_reads_percent'] = summary_table['lenfilter_output']/ summary_table['DADA2_input'].replace(0, np.nan)
     else:
-        print(f"Missing required columns in summary_table for {run}")
+        res_df['retained_reads_percent'] = summary_table['nonchim'] / summary_table['DADA2_input'].replace(0, np.nan)
+
+    for rank in ranks:
+        #res_df[f'{rank}_pread'] = res_df[f'{rank}_nread'] / res_df['input_tax_filter'].replace(0, np.nan)
+        res_df[f'{rank}_pasv'] = res_df[f'{rank}_nasv'] / res_df['nasvs'].replace(0, np.nan)
 
     return res_df
 

@@ -1,7 +1,7 @@
-include { SUMMARISE_RUN        } from '../../../modules/local/summarise_run'
-include { MERGE_RUN_SUMMARIES        } from '../../../modules/local/merge_run_summaries'
-//include { COMPARE_RUNS_FILTER       } from '../../../modules/local/compare_runs_filter'
-//include { COMPARE_RUNS_DECIDE       } from '../../../modules/local/compare_runs_decide'
+include { SUMMARISE_RUN                    } from '../../../modules/local/summarise_run'
+include { MERGE_RUN_SUMMARIES              } from '../../../modules/local/merge_run_summaries'
+include { FILTER_RUNS                      } from '../../../modules/local/filter_runs'
+//include { COMPARE_RUNS_DECIDE            } from '../../../modules/local/compare_runs_decide'
 
 workflow COMPARE_RUNS {
     take:
@@ -16,14 +16,18 @@ workflow COMPARE_RUNS {
         .set{ch_run_data}
 
     SUMMARISE_RUN (ch_run_data)
-        ch_run_table = SUMMARISE_RUN.out.csv
+    ch_run_table = SUMMARISE_RUN.out.csv
     
     MERGE_RUN_SUMMARIES (
         ch_run_table.map { it[1] }.collect()
     ) 
 
-  //  COMPARE_RUNS_FILTER ()
-    //COMPARE_RUNS_DECIDE ()
+    full_table = MERGE_RUN_SUMMARIES.out.csv
+    
+    FILTER_RUNS ( full_table )
+    
+   // FIND_BEST_RUN ()
+
 
    // emit:
 
