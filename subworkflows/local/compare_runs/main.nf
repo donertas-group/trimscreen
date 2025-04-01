@@ -1,7 +1,7 @@
 include { SUMMARISE_RUN                    } from '../../../modules/local/summarise_run'
 include { MERGE_RUN_SUMMARIES              } from '../../../modules/local/merge_run_summaries'
 include { FILTER_RUNS                      } from '../../../modules/local/filter_runs'
-//include { COMPARE_RUNS_DECIDE            } from '../../../modules/local/compare_runs_decide'
+include { FIND_BEST_RUN                    } from '../../../modules/local/find_best_run'
 
 workflow COMPARE_RUNS {
     take:
@@ -24,9 +24,14 @@ workflow COMPARE_RUNS {
 
     full_table = MERGE_RUN_SUMMARIES.out.csv
     
-    FILTER_RUNS ( full_table )
-    
-   // FIND_BEST_RUN ()
+    FILTER_RUNS( full_table )
+    filtered_table = FILTER_RUNS.out.csv 
+
+    if (params.metadata) {
+    ch_metadata = Channel.fromPath("${params.metadata}", checkIfExists: true)
+    }
+
+    FIND_BEST_RUN (filtered_table, ch_metadata)
 
 
    // emit:

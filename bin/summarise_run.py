@@ -109,8 +109,8 @@ def main():
     Ranks_to_analyse = ["Phylum","Family","Genus","Species"]
 
     summary = process_run(inputs[0], inputs[1], inputs[2], inputs[3], classifier_dir, Ranks_to_analyse)
-    summary.to_csv(f"{inputs[3]}_table.csv", sep=",", index=False)
-
+    summary.index.name = "sample"
+    summary.to_csv(f"{inputs[3]}_table.csv", sep=",", index=True)
 
 
 if __name__ == "__main__":

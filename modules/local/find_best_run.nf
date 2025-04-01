@@ -1,5 +1,5 @@
-process MERGE_RUN_SUMMARIES {
-    tag "merge"
+process FIND_BEST_RUN {
+    tag "decide"
     label "process_low"
 
     conda "conda-forge::python=3.12.0 biopython=1.81 numpy=1.26.3 pandas=1.1.5 scikit-bio=0.4.2"
@@ -8,16 +8,21 @@ process MERGE_RUN_SUMMARIES {
         'oras://community.wave.seqera.io/library/scikit-bio:0.6.3--60b3440d8dded0f7' }"
 
     input:
-    path stats
+    path table
+    path metadata
 
     output:
-    path "full_table.csv" , emit: csv
+    path "best_runs.csv",   emit: id
+    path "report.txt",      emit: report
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
     """
-    merge_summaries.py -i $stats
+    find_best_run.py -i $table -m $metadata -t Phylum Genus 
     """
+
+
+
 }
