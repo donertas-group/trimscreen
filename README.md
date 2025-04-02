@@ -66,11 +66,10 @@ max_len_asv: 500
 the `fasta_bbduk` and `fasta_blastn` are the reference genome of the host.
 
 Now, you can run the pipeline using:
-
-<!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
-
 ```bash
-nextflow run donertas-group-trimscreen \
+mkdir <YOUR_DIR>; cd <YOUR_DIR>
+git clone https://github.com/donertas-group/trimscreen.git
+nextflow run trimscreen \
     -profile test,apptainer \
     --outdir <OUTDIR> \
     --input <INPUT_DIR>/samplesheet.csv \
