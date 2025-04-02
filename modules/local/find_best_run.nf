@@ -12,17 +12,14 @@ process FIND_BEST_RUN {
     path metadata
 
     output:
-    path "best_runs.csv",   emit: id
-    path "report.txt",      emit: report
+    tuple stdout, path("report.txt"), emit: info          
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
     """
-    find_best_run.py -i $table -m $metadata -t Phylum Genus 
+    find_best_run.py -i $table -m $metadata -t Phylum Genus
     """
-
-
 
 }

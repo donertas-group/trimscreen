@@ -32,8 +32,9 @@ workflow COMPARE_RUNS {
     }
 
     FIND_BEST_RUN (filtered_table, ch_metadata)
+    
 
-
-   // emit:
+    emit:
+    best_runs = FIND_BEST_RUN.out
 
 }
