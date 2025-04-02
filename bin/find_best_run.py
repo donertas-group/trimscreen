@@ -3,7 +3,7 @@ import pandas as pd
 import sys
 import math
 import argparse
-import json
+
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Find the best run")
     parser.add_argument("-i", "--input", required=True, help="Input file")
@@ -79,10 +79,7 @@ def main():
     # Identify all runs with the minimum rank
     bests = [(run, rank) for run, rank in combined_ranks.items() if rank == min_rank]
     best_runs = [run for run, rank in bests]
-    #print(json.dumps(best_runs))  
-    #print(" ".join(best_runs))
     print(best_runs)
-    #pd.DataFrame([run for run, rank in best_runs], columns=['run']).to_csv("best_runs.csv", sep=",", index=False)
 
     # Open the file for writing
     with open('report.txt', 'w') as f:
