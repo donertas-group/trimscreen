@@ -1,14 +1,5 @@
 # donertas-group/trimscreen
 
-[![GitHub Actions CI Status](https://github.com/donertas-group/trimscreen/actions/workflows/ci.yml/badge.svg)](https://github.com/donertas-group/trimscreen/actions/workflows/ci.yml)
-[![GitHub Actions Linting Status](https://github.com/donertas-group/trimscreen/actions/workflows/linting.yml/badge.svg)](https://github.com/donertas-group/trimscreen/actions/workflows/linting.yml)[![Cite with Zenodo](http://img.shields.io/badge/DOI-10.5281/zenodo.XXXXXXX-1073c8?labelColor=000000)](https://doi.org/10.5281/zenodo.XXXXXXX)
-[![nf-test](https://img.shields.io/badge/unit_tests-nf--test-337ab7.svg)](https://www.nf-test.com)
-
-[![Nextflow](https://img.shields.io/badge/nextflow%20DSL2-%E2%89%A524.04.2-23aa62.svg)](https://www.nextflow.io/)
-[![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/en/latest/)
-[![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
-[![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
-[![Launch on Seqera Platform](https://img.shields.io/badge/Launch%20%F0%9F%9A%80-Seqera%20Platform-%234256e7)](https://cloud.seqera.io/launch?pipeline=https://github.com/donertas-group/trimscreen)
 
 ## Introduction
 
@@ -31,30 +22,78 @@
 
 <!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
      Explain what rows and columns represent. For instance (please edit as appropriate):
-
+-->
 First, prepare a samplesheet with your input data that looks as follows:
 
 `samplesheet.csv`:
 
 ```csv
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
+sample,short_reads_fastq_1,short_reads_fastq_2,long_reads_fastq_1
+CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz,
+```
+Each row represents a pair of fastq files (paired end). Single-end is not enabled for this pipeline. Don't forget the last comma at end of each line.
+
+Then prepare a metadata sheet that looks as follows:
+
+`metadata.tsv`:
+
+```tsv
+ID  condition
+E10A    sample
+E10B    sample
+CONTROL_REP1    control
+```
+Note that metadata needs to be tab-separated file.
+
+Lastly prepare a parameter file:
+`params.yaml`
+
+```yaml
+fasta_bbduk: '/scratch/shire/data/nj/reference/genome/nothobranchius_furzeri/NfurGRZ-RIMD1/GCF_043380555.1_NfurGRZ-RIMD1_genomic.fna'
+classification_bbduk: true
+validation_blastn: true
+fasta_blastn: '/scratch/shire/data/nj/reference/genome/nothobranchius_furzeri/NfurGRZ-RIMD1/GCF_043380555.1_NfurGRZ-RIMD1_genomic.fna'
+enable_filter: true
+FW_primer: 'CAATGGRSGVRASYCTGAHS'
+RV_primer: 'AGGGTATCTAATCCT'
+trunclenf_range: "235:5:240"
+trunclenr_range: "200:5:205"
+dada_ref_taxonomy: "silva=138"
+min_len_asv: 200
+max_len_asv: 500
 ```
 
-Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
-
--->
+the `fasta_bbduk` and `fasta_blastn` are the reference genome of the host.
 
 Now, you can run the pipeline using:
 
 <!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
 
 ```bash
-nextflow run donertas-group/trimscreen \
-   -profile <docker/singularity/.../institute> \
-   --input samplesheet.csv \
-   --outdir <OUTDIR>
+nextflow run donertas-group-trimscreen \
+    -profile test,apptainer \
+    --outdir <OUTDIR> \
+    --input <INPUT_DIR>/samplesheet.csv \
+    --run_host_removal true \
+    -params-file <INPUT_DIR>/params.yaml \
+    --metadata <INPUT_DIR>/metadata.tsv
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/usage/getting_started/configuration#custom-configuration-files).
@@ -87,3 +126,12 @@ This pipeline uses code and infrastructure developed and maintained by the [nf-c
 > Philip Ewels, Alexander Peltzer, Sven Fillinger, Harshil Patel, Johannes Alneberg, Andreas Wilm, Maxime Ulysse Garcia, Paolo Di Tommaso & Sven Nahnsen.
 >
 > _Nat Biotechnol._ 2020 Feb 13. doi: [10.1038/s41587-020-0439-x](https://dx.doi.org/10.1038/s41587-020-0439-x).
+[![GitHub Actions CI Status](https://github.com/donertas-group/trimscreen/actions/workflows/ci.yml/badge.svg)](https://github.com/donertas-group/trimscreen/actions/workflows/ci.yml)
+[![GitHub Actions Linting Status](https://github.com/donertas-group/trimscreen/actions/workflows/linting.yml/badge.svg)](https://github.com/donertas-group/trimscreen/actions/workflows/linting.yml)[![Cite with Zenodo](http://img.shields.io/badge/DOI-10.5281/zenodo.XXXXXXX-1073c8?labelColor=000000)](https://doi.org/10.5281/zenodo.XXXXXXX)
+[![nf-test](https://img.shields.io/badge/unit_tests-nf--test-337ab7.svg)](https://www.nf-test.com)
+
+[![Nextflow](https://img.shields.io/badge/nextflow%20DSL2-%E2%89%A524.04.2-23aa62.svg)](https://www.nextflow.io/)
+[![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/en/latest/)
+[![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
+[![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
+[![Launch on Seqera Platform](https://img.shields.io/badge/Launch%20%F0%9F%9A%80-Seqera%20Platform-%234256e7)](https://cloud.seqera.io/launch?pipeline=https://github.com/donertas-group/trimscreen)
