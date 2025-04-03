@@ -1,5 +1,5 @@
 process PICRUST {
-    tag "${seq},${abund}"
+    tag "${seq},${abund},${meta.runID}"
     label 'process_medium'
 
     conda "bioconda::picrust2=2.5.3"
@@ -8,17 +8,17 @@ process PICRUST {
         'biocontainers/picrust2:2.5.3--pyhdfd78af_0' }"
 
     input:
-    path(seq)
-    path(abund)
+    tuple val(meta), path(seq)
+    tuple val(meta), path(abund)
     val(source)
     val(message)
 
     output:
-    path("all_output/*") , emit: outfolder
-    path("*_descrip.tsv"), emit: pathways
-    path "versions.yml"  , emit: versions
-    path "*.args.txt"    , emit: args
-    path "${message}.txt", emit: message
+    tuple val(meta), path("all_output/*")    , emit: outfolder
+    tuple val(meta), path("*_descrip.tsv")   , emit: pathways
+    path "versions.yml"                      , emit: versions
+    tuple val(meta), path("*.args.txt")      , emit: args
+    tuple val(meta), path("message.txt")  , emit: message
 
     when:
     task.ext.when == null || task.ext.when
@@ -49,7 +49,7 @@ process PICRUST {
     add_descriptions.py -i all_output/pathways_out/path_abun_unstrat.tsv.gz -m METACYC \
                     -o METACYC_path_abun_unstrat_descrip.tsv
 
-    echo "$message" > "${message}.txt"
+    echo "$message" > "message.txt"
     echo -e "picrust\t$args" > "picrust.args.txt"
 
     cat <<-END_VERSIONS > versions.yml

@@ -1,5 +1,5 @@
 include { AMPLISEQ_SIMPLIFIED                                       } from '../ampliseq_simplified/main'
-include { COMPARE_RUNS                                              } from '../compare_runs/main'
+//include { COMPARE_RUNS                                              } from '../compare_runs/main'
 
 include { GENERATE_PARAMS                                           } from '../../../modules/local/generate_params'
 
@@ -25,7 +25,7 @@ workflow AMPLISEQ_SCREENING {
     
 
     AMPLISEQ_SIMPLIFIED(ch_samplesheet_w_params)
-    ch_stats = AMPLISEQ_SIMPLIFIED.out.runs_summary
+/*    ch_stats = AMPLISEQ_SIMPLIFIED.out.runs_summary
     ch_asv = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
     ch_tax = AMPLISEQ_SIMPLIFIED.out.runs_asv_tax
 
@@ -44,6 +44,6 @@ workflow AMPLISEQ_SCREENING {
         .set(ch_run)
 
     AMPLISEQ_POSTPROCESSING(ch_run)
-
+*/
 
 }
