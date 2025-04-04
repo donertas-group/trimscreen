@@ -37,7 +37,7 @@ include { SUMMARIZER                                                } from '../m
     RUN MAIN WORKFLOW
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
+/*
 // specify the ch_fasta_blastn channel if it is not provided via --fasta_blastn
 def ch_fasta_blastn = Channel.empty()
 
@@ -58,7 +58,7 @@ if ( !params.fasta_bbduk && params.classification_bbduk ) {
     // If params.fasta_bbduk is there, use it for the creation of the blastn database
     ch_fasta_bbduk = Channel.fromPath(params.fasta_bbduk)
 }
-
+*/
 
 // This is for new TRIMSCREEN after making detaxizer optional
 workflow TRIMSCREEN {
@@ -68,7 +68,7 @@ workflow TRIMSCREEN {
 
     main:
 
-    if (params.run_host_removal) {
+    if (!params.skip_host_removal) {
 
         DETAXIZER_SIMPLIFIED(ch_samplesheet)
         downstream_samplesheet = DETAXIZER_SIMPLIFIED.out.ch_samplesheet

@@ -68,10 +68,6 @@
             "description": "Parameters which enable/disable certain steps used in the workflow.",
             "default": "",
             "properties": {
-                "run_host_removal": {
-                    "type": "boolean",
-                    "description": "If host/contaminant removal should be run with simplified detaxizer."
-                },
                 "preprocessing": {
                     "type": "boolean",
                     "description": "If preprocessing with fastp should be turned on."
@@ -114,10 +110,6 @@
                     "type": "boolean",
                     "description": "Save intermediates to the results folder.",
                     "help_text": "Set this parameter to `True` if you want to publish the intermediate files to the results folder."
-                },
-                "run_ampliseq_screening": {
-                    "type": "boolean",
-                    "description": "If different trimming parameter combinations should be screened with simplified ampliseq."
                 },
                 "single_end": {
                     "type": "boolean",
@@ -1000,6 +992,18 @@
             "description": "",
             "default": "",
             "properties": {
+                "skip_host_removal": {
+                    "type": "boolean",
+                    "description": "If host/contaminant removal should be skipped with simplified detaxizer."
+                },
+                "skip_ampliseq_screening": {
+                    "type": "boolean",
+                    "description": "If screening trimming parameters with simplified ampliseq should be skipped."
+                },
+                "skip_run_comparison": {
+                    "type": "boolean",
+                    "description": "If comparing runs with different trimming lengths should be skipped."
+                },
                 "skip_fastqc": {
                     "type": "boolean",
                     "description": "Skip FastQC"

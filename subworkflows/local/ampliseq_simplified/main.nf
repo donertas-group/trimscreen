@@ -239,10 +239,11 @@ include { FILTER_CLUSTERS               } from '../../../modules/ampliseq/filter
 
 include { PARSE_INPUT                   } from '../../../subworkflows/local/ampliseq/parse_input'
 include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/local/ampliseq/cutadapt_workflow_modified'
-include { DADA2_PREPROCESSING  } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
+include { DADA2_PREPROCESSING           } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
 include { DADA2_TAXONOMY_WF             } from '../../../subworkflows/local/ampliseq/dada2_taxonomy_wf'
 include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/local/ampliseq/phyloseq_workflow_modified'
-include { COMPARE_RUNS                                              } from '../../../subworkflows/local/compare_runs/main'
+include { COMPARE_RUNS                  } from '../../../subworkflows/local/compare_runs/main'
+include { CREATE_LINK                   } from '../../../modules/local/create_link'
 
 /*
 include { QIIME2_PREPTAX                } from '../../../subworkflows/ampliseq/qiime2_preptax'
@@ -720,7 +721,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     ch_tax  =  DADA2_TAXONOMY_WF.out.tax
 
 
-    if (true){//!params.skip_run_comparison) {
+    if (!params.skip_run_comparison) {
         COMPARE_RUNS ( ch_stats, ch_asv, ch_tax )
 
         COMPARE_RUNS.out
@@ -916,18 +917,18 @@ workflow AMPLISEQ_SIMPLIFIED {
     // MODULE: Predict functional potential of a bacterial community from marker genes with Picrust2
     //
 
-    params.picrust=true //temporary
     run_qiime2=false //temporary
 
-    if (true){// params.picrust ) {
+    if ( params.picrust ) {
         if (false){// run_qiime2 && !params.skip_abundance_tables && ( params.dada_ref_taxonomy || params.qiime_ref_taxonomy || params.qiime_ref_tax_custom || params.classifier || params.sintax_ref_taxonomy || params.kraken2_ref_taxonomy || params.kraken2_ref_tax_custom ) && !params.skip_taxonomy ) {
             PICRUST ( QIIME2_EXPORT.out.abs_fasta, QIIME2_EXPORT.out.abs_tsv, "QIIME2", "This Picrust2 analysis is based on filtered reads from QIIME2" )
         } else {
 //            PICRUST ( ch_fasta, ch_dada2_asv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" )
             PICRUST ( ch_fasta, ch_tsv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" )
         }
+        ch_best = PICRUST.out.args
         ch_versions = ch_versions.mix(PICRUST.out.versions.ifEmpty(null))
-    }
+    } else { ch_best = ch_tsv }
 
 /*
     //
@@ -966,18 +967,26 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
     }*/
 
-        ch_tree_for_phyloseq = []
-        PHYLOSEQ_WORKFLOW (
-            ch_tax_for_phyloseq, 
-            ch_tsv, 
-            ch_metadata.ifEmpty([]),
-            ch_tree_for_phyloseq,
-            false//replacing: run_qiime2
-        )
-        ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
+    ch_tree_for_phyloseq = []
+    PHYLOSEQ_WORKFLOW (
+        ch_tax_for_phyloseq, 
+        ch_tsv, 
+        ch_metadata.ifEmpty([]),
+        ch_tree_for_phyloseq,
+        false//replacing: run_qiime2
+    )
+    ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
 
 
+    //
+    // SUBWORKFLOW: Create link to best runs in the best_run folder
+    //
 
+    ch_best.combine(PHYLOSEQ_WORKFLOW.out.rds, by:0)
+        .collect().map { it[0] }
+        .set {ch_best} 
+    //ch_best = ch_tsv.collect().map { it[0] }
+    CREATE_LINK ( ch_best )
 
 
 
