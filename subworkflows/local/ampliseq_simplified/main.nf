@@ -160,7 +160,6 @@ if ( !(workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1)
     run_qiime2_taxonomy = false
 }
 
-*/
 //only run QIIME2 downstream analysis when taxonomy is actually calculated and all required data is available
 if ( !(workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) && !params.skip_taxonomy && !params.skip_qiime && !params.skip_qiime_downstream && (!params.skip_dada_taxonomy || params.sintax_ref_taxonomy || params.qiime_ref_taxonomy || params.qiime_ref_tax_custom || params.kraken2_ref_taxonomy || params.kraken2_ref_tax_custom || params.multiregion) ) {
     run_qiime2 = true
@@ -168,6 +167,7 @@ if ( !(workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1)
     run_qiime2 = false
     if ( workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1 ) { log.warn "Conda or mamba is enabled, any steps involving QIIME2 are not available. Use a container engine instead of conda to enable all software." }
 }
+*/
 
 // This tracks tax tables produced during pipeline and each table will be used during phyloseq
 ch_tax_for_phyloseq = Channel.empty()
@@ -190,7 +190,7 @@ include { MULTIQC                           } from '../../../modules/nf-core/mul
 //
 // MODULE: Installed directly from nf-core/modules
 //
-include { RENAME_RAW_DATA_FILES                      } from '../../../modules/local/ampliseq/rename_raw_data_files'
+include { RENAME_RAW_DATA_FILES                      } from '../../../modules/local/ampliseq/rename_raw_data_files_modified'
 include { DADA2_ERR                                  } from '../../../modules/local/ampliseq/dada2_err'
 include { NOVASEQ_ERR                                } from '../../../modules/local/ampliseq/novaseq_err'
 include { DADA2_DENOISING                            } from '../../../modules/local/ampliseq/dada2_denoising'
@@ -550,7 +550,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     //
     // Modules : amplicon length filtering
     //
-    if ( (params.min_len_asv || params.max_len_asv) && !params.multiregion ) {
+    if ( (params.min_len_asv || params.max_len_asv)){// && !params.multiregion ) {
         FILTER_LEN_ASV ( ch_dada2_fasta.combine(ch_dada2_asv.ifEmpty( [] ),by:0 )) // combine the two channels as they both contain meta now
         ch_versions = ch_versions.mix(FILTER_LEN_ASV.out.versions)
         MERGE_STATS_FILTERLENASV ( ch_stats, FILTER_LEN_ASV.out.stats )
@@ -1140,7 +1140,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     if ( params.input ) {
         file("${params.outdir}/input").mkdir()
         file("${params.input}").copyTo("${params.outdir}/input")
-    }
+    }/*
     if ( params.input_fasta ) {
         file("${params.outdir}/input").mkdir()
         file("${params.input_fasta}").copyTo("${params.outdir}/input")
@@ -1148,7 +1148,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     if ( params.multiregion ) {
         file("${params.outdir}/input").mkdir()
         file("${params.multiregion}").copyTo("${params.outdir}/input")
-    }
+    }*/
     if ( params.metadata ) {
         file("${params.outdir}/input").mkdir()
         file("${params.metadata}").copyTo("${params.outdir}/input")
