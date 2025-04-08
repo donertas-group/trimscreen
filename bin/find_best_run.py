@@ -78,7 +78,7 @@ def main():
 
     # Identify all runs with the minimum rank
     bests = [(run, rank) for run, rank in combined_ranks.items() if rank == min_rank]
-    best_runs = [run for run, rank in bests]
+    best_runs = [run for run, rank in bests[0:2]] # choose at most two best runs if there are more in tie
     print(best_runs)
 
     # Open the file for writing
