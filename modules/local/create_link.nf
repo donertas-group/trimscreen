@@ -10,6 +10,10 @@ process CREATE_LINK {
 
     script:
     """
-    ln -s ${workflow.projectDir}/../$params.outdir/runs/${meta.runID} ${meta.runID}
+    if [[ "$params.outdir" = /* ]]; then
+        ln -s $params.outdir/runs/${meta.runID} ${meta.runID}
+    else
+        ln -s ${workflow.projectDir}/../$params.outdir/runs/${meta.runID} ${meta.runID}
+    fi
     """
 }
