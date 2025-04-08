@@ -23,13 +23,15 @@
 <!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
      Explain what rows and columns represent. For instance (please edit as appropriate):
 -->
-First, prepare a samplesheet with your input data that looks as follows:
+First, prepare a samplesheet with the *full path* of your input data file that looks as follows:
 
 `samplesheet.csv`:
 
 ```csv
 sample,short_reads_fastq_1,short_reads_fastq_2,long_reads_fastq_1
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz,
+E10A,/<full_path_to>/E10A_R1.fastq.gz,/<full_path_to>/E10A_R2.fastq.gz,
+E10B,/<full_path_to>/E10B_R1.fastq.gz,/<full_path_to>/E10B_R2.fastq.gz,
+CONTROL_REP1,/<full_path_to>/control_R1.fastq.gz,/<full_path_to>/control_R2.fastq.gz,
 ```
 Each row represents a pair of fastq files (paired end). Single-end is not enabled for this pipeline. Don't forget the last comma at end of each line.
 
