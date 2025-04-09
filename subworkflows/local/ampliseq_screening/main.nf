@@ -16,7 +16,7 @@ workflow AMPLISEQ_SCREENING {
     .splitCsv(header: true, sep: ',')
     .map { row -> tuple(row.runID, row.trunclenf, row.trunclenr) }
 
-
+/*
     ch_samplesheet.combine(ch_params)
     .map { meta, read1, read2, _, runID, trunclenf, trunclenr -> 
     def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr]  
@@ -25,25 +25,7 @@ workflow AMPLISEQ_SCREENING {
     
 
     AMPLISEQ_SIMPLIFIED(ch_samplesheet_w_params)
-/*    ch_stats = AMPLISEQ_SIMPLIFIED.out.runs_summary
-    ch_asv = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
-    ch_tax = AMPLISEQ_SIMPLIFIED.out.runs_asv_tax
-
-
-
-    if (true){//!params.skip_run_comparison) {
-        COMPARE_RUNS (
-        ch_stats,
-        ch_asv,
-        ch_tax
-        )  
-    }
-
-    COMPARE_RUNS.out
-        .map{ id, report -> id }
-        .set(ch_run)
-
-    AMPLISEQ_POSTPROCESSING(ch_run)
 */
 
+    AMPLISEQ_SIMPLIFIED(ch_samplesheet, ch_params)
 }

@@ -190,7 +190,8 @@ include { MULTIQC                           } from '../../../modules/nf-core/mul
 //
 // MODULE: Installed directly from nf-core/modules
 //
-include { RENAME_RAW_DATA_FILES                      } from '../../../modules/local/ampliseq/rename_raw_data_files_modified'
+include { RENAME_RAW_DATA_FILES                      } from '../../../modules/local/ampliseq/rename_raw_data_files'
+//include { RENAME_RAW_DATA_FILES                      } from '../../../modules/local/ampliseq/rename_raw_data_files_modified'
 include { DADA2_ERR                                  } from '../../../modules/local/ampliseq/dada2_err'
 include { NOVASEQ_ERR                                } from '../../../modules/local/ampliseq/novaseq_err'
 include { DADA2_DENOISING                            } from '../../../modules/local/ampliseq/dada2_denoising'
@@ -276,6 +277,7 @@ include { makeComplement         } from '../../../subworkflows/local/ampliseq/ut
 workflow AMPLISEQ_SIMPLIFIED {
     take:
     ch_samplesheet
+    ch_params
     //trunclenf
     //trunclenr
 
@@ -354,9 +356,16 @@ workflow AMPLISEQ_SIMPLIFIED {
     //
     // MODULE: Cutadapt
     //
+    RENAME_RAW_DATA_FILES.out.fastq
+        .combine(ch_params)
+        .map { meta, reads, runID, trunclenf, trunclenr -> 
+        def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr]  
+        tuple(new_meta, reads)}
+        .set{ ch_renamed_w_params }
+
     if (!params.skip_cutadapt) {
         CUTADAPT_WORKFLOW (
-            RENAME_RAW_DATA_FILES.out.fastq,
+            ch_renamed_w_params,//RENAME_RAW_DATA_FILES.out.fastq,
             false, //replacing params.illumina_pe_its,
             false //replacing params.double_primer
         ).reads.set { ch_trimmed_reads }
@@ -727,28 +736,16 @@ workflow AMPLISEQ_SIMPLIFIED {
         COMPARE_RUNS.out
             .map{ id, report -> id }
             .collect().map { it[0] }
-            .set{ ch_run }
-
-        ch_tsv = ch_dada2_asv
-            .filter { meta, file -> ch_run.contains ( meta.runID ) }
+            .set{ ch_best }
+        
+        ch_best_tsv = ch_dada2_asv
+            .filter { meta, file -> ch_best.contains ( meta.runID ) }
         
         ch_fasta
-            .filter { meta, file -> ch_run.contains ( meta.runID ) }
-            .set { ch_fasta }
+            .filter { meta, file -> ch_best.contains ( meta.runID ) }
+            .set { ch_best_fasta }
 
     }// else {finish pipeline    }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -924,11 +921,11 @@ workflow AMPLISEQ_SIMPLIFIED {
             PICRUST ( QIIME2_EXPORT.out.abs_fasta, QIIME2_EXPORT.out.abs_tsv, "QIIME2", "This Picrust2 analysis is based on filtered reads from QIIME2" )
         } else {
 //            PICRUST ( ch_fasta, ch_dada2_asv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" )
-            PICRUST ( ch_fasta, ch_tsv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" )
+            PICRUST ( ch_best_fasta, ch_best_tsv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" )
         }
         ch_best = PICRUST.out.args
         ch_versions = ch_versions.mix(PICRUST.out.versions.ifEmpty(null))
-    } else { ch_best = ch_tsv }
+    } else { ch_best = ch_best_tsv }
 
 /*
     //
@@ -970,7 +967,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     ch_tree_for_phyloseq = []
     PHYLOSEQ_WORKFLOW (
         ch_tax_for_phyloseq, 
-        ch_tsv, 
+        ch_best_tsv, 
         ch_metadata.ifEmpty([]),
         ch_tree_for_phyloseq,
         false//replacing: run_qiime2
