@@ -73,8 +73,9 @@ workflow DADA2_PREPROCESSING {
     ch_trimmed_reads.combine(ch_trunc).set { ch_trimmed_reads }
 */
 
-    ch_trimmed_reads.map{ meta, reads -> [meta, reads, ['FW', meta.trunclenf], ['RV', meta.trunclenr]]}
-    .set {ch_trimmed_reads}
+    ch_trimmed_reads
+        .map{ meta, reads -> [meta, reads, ['FW', meta.trunclenf], ['RV', meta.trunclenr]]}
+        .set {ch_trimmed_reads}
 
     //filter reads
     DADA2_FILTNTRIM ( ch_trimmed_reads.dump(tag: 'into_filtntrim')  )
@@ -87,8 +88,6 @@ workflow DADA2_PREPROCESSING {
             passed: true
         }
         .set { ch_dada2_filtntrim_results }
-    
-
 
     ch_dada2_filtntrim_results.passed.set { ch_dada2_filtntrim_results_passed }
     
@@ -103,35 +102,42 @@ workflow DADA2_PREPROCESSING {
                 error("The following samples had too few reads (<$params.min_read_counts) after quality filtering with DADA2:\n$samples\nPlease check settings related to quality filtering such as `--max_ee` (increase), `--trunc_qmin` (increase) or `--trunclenf`/`--trunclenr` (decrease). Ignore that samples using `--ignore_failed_filtering` or adjust the threshold with `--min_read_counts`.")
             }
         }
-    /*/
-    // Added by Yi Wang to filter out runs that contain failed samples
-    //
-    // Collect the runs with failed samples
-    ch_failed_dada2_filtntrim_runs = ch_dada2_filtntrim_results.failed
-        .map { meta, reads, logs, args -> meta.run }
+
+
+
+    // Added by Yi Wang to filter out runs that contain failed samples////////////////
+    ch_failed_runs = ch_dada2_filtntrim_results.failed
+        .map { meta, reads, logs,args -> meta.run }
         .unique()
         .collect()
+        .toList()
+
+    // in case ch_failed is empty, create a dummy entry
+    ch_failed_dummy = Channel.value([[run:''],'','',''])
+        .map { meta, reads , logs, args-> meta.run }
+        .unique()
+        .collect()
+        .toList()
+
+   // ch_failed_dummy.mix(ch_failed ).set {ch_failed_runs}
 
     // Filter out the failed runs from the passed samples
     ch_dada2_filtntrim_results_passed = ch_dada2_filtntrim_results.passed
-        .combine(ch_failed_dada2_filtntrim_runs)
+        .combine(ch_failed_runs)
         .filter { meta, reads, logs, args, failed_runs -> !(meta.run in failed_runs) }
         .map { meta, reads, logs, args, failed_runs -> [meta, reads, logs, args] }
 
-    // Log the failed runs and samples
-    ch_failed_dada2_filtntrim_runs
+    // Log the failed runs
+    ch_failed_runs
         .subscribe { failed_runs ->
             if (failed_runs.size() > 0) {
-                log.warn "The following runs contained samples with too few reads (<$params.min_read_counts) after trimming and will be filtered out:\n${failed_runs.join('\n')}"
+                log.warn "The following runs contained samples with too few reads (<$params.min_read_counts) after filtering and will be filtered out:\n${failed_runs.join('\n')}"
             }
         }
+//////////////////////////////////////////////////////////////////////
 
-    ch_dada2_filtntrim_results.failed
-        .map { meta, reads, logs, args -> meta.id }
-        .collect()
-        .subscribe { failed_samples ->
-        log.warn "The following samples had too few reads (<$params.min_read_counts) after trimming with cutadapt:\n${failed_samples.join('\n')}"
-        }*/
+
+
 
 
     // Break apart the reads and logs so that only the samples
