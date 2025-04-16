@@ -369,6 +369,7 @@ workflow AMPLISEQ_SIMPLIFIED {
             false, //replacing params.illumina_pe_its,
             false //replacing params.double_primer
         ).reads.set { ch_trimmed_reads }
+
         ch_multiqc_files = ch_multiqc_files.mix(CUTADAPT_WORKFLOW.out.logs.collect{it[1]})
         ch_versions = ch_versions.mix(CUTADAPT_WORKFLOW.out.versions)
     } else {

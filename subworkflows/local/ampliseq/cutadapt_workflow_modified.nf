@@ -62,7 +62,31 @@ workflow CUTADAPT_WORKFLOW {
             passed: true
         }
         .set { ch_trimmed_reads_result }
-    ch_trimmed_reads_result.passed.set { ch_trimmed_reads_passed }
+
+
+
+    ch_failed = ch_trimmed_reads_result.failed
+        .map { meta, reads -> meta.run }
+        .unique()
+        .collect()
+        .toList()
+
+    // in case ch_failed is empty, create a dummy entry
+    ch_failed_runs = Channel.value([[run:''],'']) 
+        .map { meta, reads -> meta.run }
+        .unique()
+        .collect()
+        .toList()
+
+    ch_failed_runs.mix(ch_failed ).set {ch_failed_runs}
+ 
+    // Filter out the failed runs from the passed samples
+    ch_trimmed_reads_passed = ch_trimmed_reads_result.passed
+        .combine(ch_failed_runs)
+        .filter { meta, reads, failed_runs -> !(meta.run in failed_runs) }
+        .map { meta, reads, failed_runs -> [meta, reads] }
+
+    // Log the failed runs and samples
     ch_trimmed_reads_result.failed
         .map { meta, reads -> [ meta.id ] }
         .collect()
@@ -75,9 +99,17 @@ workflow CUTADAPT_WORKFLOW {
             }
         }
 
+    ch_failed
+        .subscribe { failed_runs ->
+            if (failed_runs.size() > 0) {
+                log.warn "The following runs contained samples with too few reads (<$params.min_read_counts) after trimming and will be filtered out:\n${failed_runs.join('\n')}"
+            }
+        }
+
     emit:
     reads    = ch_trimmed_reads_passed
     logs     = CUTADAPT_BASIC.out.log
     summary  = CUTADAPT_SUMMARY_MERGE.out.tsv
     versions = ch_versions_cutadapt_workflow
+    failed   = ch_failed_runs
 }
