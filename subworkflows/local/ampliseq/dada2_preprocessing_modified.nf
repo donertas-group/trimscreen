@@ -84,12 +84,17 @@ workflow DADA2_PREPROCESSING {
     //Filter empty files
     DADA2_FILTNTRIM.out.reads_logs_args
         .branch {
-            failed: it[0].single_end ? it[1].countFastq() < params.min_read_counts : it[1][0].countFastq() < params.min_read_counts || it[1][1].countFastq() < params.min_read_counts
+            failed: it[0].single_end ? 
+                        it[1].countFastq() < params.min_read_counts : 
+                        it[1][0].countFastq() < params.min_read_counts || it[1][1].countFastq() < params.min_read_counts
+            success: it[0].single_end ? 
+                        it[1].countFastq() >= params.min_read_counts : 
+                        it[1][0].countFastq() >= params.min_read_counts && it[1][1].countFastq() >= params.min_read_counts
             passed: true
         }
         .set { ch_dada2_filtntrim_results }
 
-    ch_dada2_filtntrim_results.passed.set { ch_dada2_filtntrim_results_passed }
+    //ch_dada2_filtntrim_results.passed.set { ch_dada2_filtntrim_results_passed }
     
     ch_dada2_filtntrim_results.failed
         .map { meta, reads, logs, args -> [ meta.id ] }
@@ -97,12 +102,40 @@ workflow DADA2_PREPROCESSING {
         .subscribe {
             samples = it.join("\n")
             if (params.ignore_failed_filtering) {
-                log.warn "The following samples had too few reads (<$params.min_read_counts) after quality filtering with DADA2:\n$samples\nIgnoring failed samples and continue!\n"
+                log.warn "The following samples had too few reads (<$params.min_read_counts) after quality filtering with DADA2:\n$samples\nRuns containing failed samples are removed and continue!\n"
             } else {
                 error("The following samples had too few reads (<$params.min_read_counts) after quality filtering with DADA2:\n$samples\nPlease check settings related to quality filtering such as `--max_ee` (increase), `--trunc_qmin` (increase) or `--trunclenf`/`--trunclenr` (decrease). Ignore that samples using `--ignore_failed_filtering` or adjust the threshold with `--min_read_counts`.")
             }
         }
 
+    ch_dada2_filtntrim_results.success
+        .map { [ it[0].run, it ] }         // -> [runID, [meta, reads, logs, args]]
+        .groupTuple()        
+        .collect()
+        .map { groups ->
+            def maxSize = groups.collect { it[1].size() }.max()
+            groups
+                .findAll { it[1].size() == maxSize }  // keep all with max size
+                .collectMany { it[1] }                // flatten one level
+        }
+        .flatMap { it }
+        .collate(4)
+       // .view { "After collate: $it" }
+        .set { ch_dada2_filtntrim_results_passed } 
+
+/*
+     // -> [runID, List<[meta, reads, logs, args]>]
+        .map { runID, entries -> [runID, entries, entries.size()] }  // Keep size info
+        .collect()
+        .map { runGroups ->
+            def maxSize = runGroups.collect { it[2] }.max()
+            def fullRuns = runGroups.findAll { it[2] == maxSize }
+                                    .collectMany { it[1] }  // extract entries
+            return fullRuns
+
+        }
+        .flatten()              // emit each item individually
+        .set { ch_dada2_filtntrim_results_passed }
 
 
     // Added by Yi Wang to filter out runs that contain failed samples////////////////
@@ -133,7 +166,7 @@ workflow DADA2_PREPROCESSING {
             if (failed_runs.size() > 0) {
                 log.warn "The following runs contained samples with too few reads (<$params.min_read_counts) after filtering and will be filtered out:\n${failed_runs.join('\n')}"
             }
-        }
+        }*/
 //////////////////////////////////////////////////////////////////////
 
 
