@@ -376,6 +376,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_trimmed_reads = RENAME_RAW_DATA_FILES.out.fastq
     }
 
+
     //
     // SUBWORKFLOW: Read preprocessing & QC plotting with DADA2
     //

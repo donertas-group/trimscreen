@@ -23,7 +23,7 @@
 <!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
      Explain what rows and columns represent. For instance (please edit as appropriate):
 -->
-First, prepare a samplesheet with the *full path* of your input data file that looks as follows:
+First, prepare a samplesheet with the *full path* of your input data file that looks as follows. There should be only be A-Z, 0-9 and `_` in sample names.
 
 `samplesheet.csv`:
 
