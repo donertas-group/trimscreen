@@ -107,68 +107,56 @@ workflow DADA2_PREPROCESSING {
                 error("The following samples had too few reads (<$params.min_read_counts) after quality filtering with DADA2:\n$samples\nPlease check settings related to quality filtering such as `--max_ee` (increase), `--trunc_qmin` (increase) or `--trunclenf`/`--trunclenr` (decrease). Ignore that samples using `--ignore_failed_filtering` or adjust the threshold with `--min_read_counts`.")
             }
         }
-
+/*
     ch_dada2_filtntrim_results.success
         .map { [ it[0].run, it ] }         // -> [runID, [meta, reads, logs, args]]
         .groupTuple()        
-        .collect()
-        .map { groups ->
-            def maxSize = groups.collect { it[1].size() }.max()
-            groups
-                .findAll { it[1].size() == maxSize }  // keep all with max size
-                .collectMany { it[1] }                // flatten one level
+        //.collect()
+        //.view { "groups: $it" }
+        //.view { groups -> "groups: " + groups.collect { pair -> "${pair[0]} -> ${pair[1].size()}" }.join(', ') }
+        .map { run, group ->
+            //def maxSize = group.max{ it.size() }.size()
+            def maxSize = group.size().collect{ it }.max()
+            println("max size ${maxSize}")
+            group
+                .findAll { it.size() == maxSize }  // keep all with max size
+                .collectMany { it }                // flatten one level
         }
+        .view { "filtered group: $it" }
         .flatMap { it }
         .collate(4)
-       // .view { "After collate: $it" }
         .set { ch_dada2_filtntrim_results_passed } 
+*/
+
+    ch_dada2_filtntrim_results.success
+        .map { [ it[0].run, it ] }         // -> [runID, [meta, reads, logs, args]]
+        .groupTuple()
+        .map { run, group -> [group.size(), group] }
+        .groupTuple()
+        .max { it[0] }
+        .flatMap {it[1]}
+        .flatMap {it}
+        .set { ch_dada2_filtntrim_results_passed }       
+ 
+//    ch_dada2_filtntrim_results_passed = ch_dada2_filtntrim_results.passed 
+
 
 /*
-     // -> [runID, List<[meta, reads, logs, args]>]
-        .map { runID, entries -> [runID, entries, entries.size()] }  // Keep size info
-        .collect()
-        .map { runGroups ->
-            def maxSize = runGroups.collect { it[2] }.max()
-            def fullRuns = runGroups.findAll { it[2] == maxSize }
-                                    .collectMany { it[1] }  // extract entries
-            return fullRuns
-
+    ch_dada2_filtntrim_results.success
+        .map { [ it[0].run, it ] }         // -> [runID, [meta, reads, logs, args]]
+        .groupTuple()
+        .map { run, group -> [group.size(), run, group] }
+        .toList()
+        .map { groups ->
+            def maxSize = groups.max { it[0] }[0]
+            println("max size $maxSize")
+            groups.findAll { it[0] == maxSize }
+                  .collect { it[2] }
         }
-        .flatten()              // emit each item individually
+        .flatMap()
         .set { ch_dada2_filtntrim_results_passed }
 
-
-    // Added by Yi Wang to filter out runs that contain failed samples////////////////
-    ch_failed_runs = ch_dada2_filtntrim_results.failed
-        .map { meta, reads, logs,args -> meta.run }
-        .unique()
-        .collect()
-        .toList()
-
-    // in case ch_failed is empty, create a dummy entry
-    ch_failed_dummy = Channel.value([[run:''],'','',''])
-        .map { meta, reads , logs, args-> meta.run }
-        .unique()
-        .collect()
-        .toList()
-
-   // ch_failed_dummy.mix(ch_failed ).set {ch_failed_runs}
-
-    // Filter out the failed runs from the passed samples
-    ch_dada2_filtntrim_results_passed = ch_dada2_filtntrim_results.passed
-        .combine(ch_failed_runs)
-        .filter { meta, reads, logs, args, failed_runs -> !(meta.run in failed_runs) }
-        .map { meta, reads, logs, args, failed_runs -> [meta, reads, logs, args] }
-
-    // Log the failed runs
-    ch_failed_runs
-        .subscribe { failed_runs ->
-            if (failed_runs.size() > 0) {
-                log.warn "The following runs contained samples with too few reads (<$params.min_read_counts) after filtering and will be filtered out:\n${failed_runs.join('\n')}"
-            }
-        }*/
-//////////////////////////////////////////////////////////////////////
-
+*/
 
 
 
