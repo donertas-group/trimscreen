@@ -290,9 +290,10 @@ workflow AMPLISEQ_SIMPLIFIED {
     ch_input_fasta = Channel.empty()
 
     ch_input_reads = ch_samplesheet
-    .map{ meta, readfw, readrv, _ -> 
-        meta.single_end = single_end.toBoolean()
-        return [meta, [readfw, readrv]]} // ignoring long_read option which is enabled in detaxizer
+        .map{ meta, readfw, readrv -> 
+            meta.single_end = single_end.toBoolean()
+            return [meta, [readfw, readrv]]
+        } // long_read option in detaxizer is disabled from here
 /*        
         def reads = single_end ? readfw : [readfw,readrv]
         if ( !meta.single_end && !readrv ) { error("Entry `reverseReads` is missing in $params.input for $meta.sample, either correct the samplesheet or use `--single_end`, `--pacbio`, or `--iontorrent`") } // make sure that reverse reads are present when single_end isn't specified

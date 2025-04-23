@@ -5,7 +5,7 @@
 */
 include { FASTQC                                                    } from '../../../modules/nf-core/fastqc/main'
 include { MULTIQC                                                   } from '../../../modules/nf-core/multiqc/main'
-//include { paramsSummaryMap                                          } from 'plugin/nf-schema'
+include { paramsSummaryMap                                          } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc                                      } from '../../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML                                    } from '../../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText                                    } from '../../../subworkflows/local/utils_nfcore_trimscreen_pipeline'
@@ -29,6 +29,29 @@ include { SUMMARIZER                                                } from '../.
 // Subworkflow with functionality to do host/contaminant-removal with modules from the nf-core/detaxizer pipeline
 //
 
+
+
+// specify the ch_fasta_blastn channel if it is not provided via --fasta_blastn
+def ch_fasta_blastn = Channel.empty()
+
+if ( !params.fasta_blastn && params.validation_blastn ) {
+    ch_fasta_blastn = Channel.fromPath(getGenomeAttribute('fasta'))
+} else if ( params.validation_blastn ){
+    // If params.fasta_blastn is there, use it for the creation of the blastn database
+    ch_fasta_blastn = Channel.fromPath(params.fasta_blastn)
+}
+
+// specify the ch_fasta_bbduk channel if it is not provided via --fasta_bbduk
+
+def ch_fasta_bbduk = Channel.empty()
+
+if ( !params.fasta_bbduk && params.classification_bbduk ) {
+    ch_fasta_bbduk = Channel.fromPath(getGenomeAttribute('fasta'))
+} else if ( params.classification_bbduk ){
+    // If params.fasta_bbduk is there, use it for the creation of the blastn database
+    ch_fasta_bbduk = Channel.fromPath(params.fasta_bbduk)
+}
+
 workflow DETAXIZER_SIMPLIFIED {
     take:
     ch_samplesheet // channel: samplesheet read in from --input
@@ -36,7 +59,7 @@ workflow DETAXIZER_SIMPLIFIED {
     main:
     ch_versions = Channel.empty()
     ch_multiqc_files = Channel.empty()
-    
+   /* 
     ch_short = ch_samplesheet.branch {
         shortReads: it[1]
         }.shortReads.map{
@@ -56,11 +79,17 @@ workflow DETAXIZER_SIMPLIFIED {
     }
 
     ch_short_long = ch_short.mix(ch_long)
+*/
+    ch_reads = ch_samplesheet
+        .map { meta, short_reads_fastq_1, short_reads_fastq_2 ->
+               [meta + [ single_end: false, long_reads: false , amount_of_files: 2 ], [ short_reads_fastq_1, short_reads_fastq_2 ] ]
+        }
 
     //
     // MODULE: Rename Fastq headers
     //
-    RENAME_FASTQ_HEADERS_PRE(ch_short_long)
+    //RENAME_FASTQ_HEADERS_PRE(ch_short_long)
+    RENAME_FASTQ_HEADERS_PRE(ch_reads)
 
     //
     // MODULE: Run FastQC
@@ -328,9 +357,9 @@ workflow DETAXIZER_SIMPLIFIED {
     ch_summary = SUMMARIZER (ch_summary)
     ch_versions = ch_versions.mix(ch_summary.versions)
     
-    if (params.generate_downstream_samplesheet){
+   // if (params.generate_downstream_samplesheet){
         GENERATE_DOWNSTREAM_SAMPLESHEETS( RENAME_FASTQ_HEADERS_AFTER.out.fastq )
-    }
+   // }
 
     //
     // Collate and save software versions
@@ -383,7 +412,9 @@ workflow DETAXIZER_SIMPLIFIED {
         []
     )
 
-    emit:multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
+    emit:
+    multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
+    new_samplesheet = GENERATE_DOWNSTREAM_SAMPLESHEETS.out.samplesheet
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 
 }

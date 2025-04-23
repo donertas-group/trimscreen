@@ -3,6 +3,7 @@
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+include { samplesheetToList                                         } from 'plugin/nf-schema'
 include { getGenomeAttribute                                        } from '../subworkflows/local/utils_nfcore_trimscreen_pipeline'
 include { DETAXIZER_SIMPLIFIED                                      } from '../subworkflows/local/detaxizer_simplified/main.nf'
 include { AMPLISEQ_SCREENING                                        } from '../subworkflows/local/ampliseq_screening/main.nf'
@@ -46,11 +47,21 @@ workflow TRIMSCREEN {
     if (!params.skip_host_removal) {
 
         DETAXIZER_SIMPLIFIED(ch_samplesheet)
-        downstream_samplesheet = DETAXIZER_SIMPLIFIED.out.ch_samplesheet
+        new_samplesheet = DETAXIZER_SIMPLIFIED.out.new_samplesheet
 
-        AMPLISEQ_SCREENING (downstream_samplesheet)
+        ch_new_samplesheet = new_samplesheet.map { sheet ->
+            def listified = samplesheetToList(sheet, "${projectDir}/assets/schema_input.json")
+            return listified.collect { sample ->
+                def meta = sample[0]  // Assuming the first element is the sample ID
+                def files = sample[1..2]    // Assuming the next two elements are the file paths
+                return tuple(meta, files)
+            }
+        }.flatten().collate(3)
 
-        multiqc_report = AMPLISEQ_SCREENING.out.multiqc_report
+        ch_new_samplesheet.view()
+        AMPLISEQ_SCREENING (ch_new_samplesheet)
+
+       // multiqc_report = AMPLISEQ_SCREENING.out.multiqc_report
 
     } else {
 
