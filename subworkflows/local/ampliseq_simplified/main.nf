@@ -374,7 +374,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_multiqc_files = ch_multiqc_files.mix(CUTADAPT_WORKFLOW.out.logs.collect{it[1]})
         ch_versions = ch_versions.mix(CUTADAPT_WORKFLOW.out.versions)
     } else {
-        ch_trimmed_reads = RENAME_RAW_DATA_FILES.out.fastq
+        ch_trimmed_reads = ch_renamed_w_params
     }
 
 
@@ -728,7 +728,8 @@ workflow AMPLISEQ_SIMPLIFIED {
     // SUBWORKFLOW: Compare runs
     //
 
-    ch_stats_to_compare  =  MERGE_STATS_STD.out.tsv
+    //ch_stats_to_compare  =  MERGE_STATS_STD.out.tsv
+    ch_stats_to_compare  =  ch_stats
     ch_asv_to_compare =  DADA2_MERGE.out.asv
     ch_tax_to_compare  =  DADA2_TAXONOMY_WF.out.tax
 
@@ -1159,7 +1160,8 @@ workflow AMPLISEQ_SIMPLIFIED {
     }
 
     emit:
-    runs_summary   =  MERGE_STATS_STD.out.tsv
+    //runs_summary   =  MERGE_STATS_STD.out.tsv
+    runs_summary   =  ch_stats
     runs_asv_table =  DADA2_MERGE.out.asv
     runs_asv_tax   =  DADA2_TAXONOMY_WF.out.tax
 

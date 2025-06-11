@@ -58,7 +58,6 @@ workflow TRIMSCREEN {
             }
         }.flatten().collate(3)
 
-        ch_new_samplesheet.view()
         AMPLISEQ_SCREENING (ch_new_samplesheet)
 
        // multiqc_report = AMPLISEQ_SCREENING.out.multiqc_report

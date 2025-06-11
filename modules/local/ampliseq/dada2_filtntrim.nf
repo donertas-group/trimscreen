@@ -11,8 +11,8 @@ process DADA2_FILTNTRIM {
     tuple val(meta), path(reads), val(trunclenf), val(trunclenr)
 
     output:
-    tuple val(meta), path("*.filt.fastq.gz"), path("*.filter_stats.tsv"), path("*.args.txt"), emit: reads_logs_args
-    path "versions.yml"                        , emit: versions
+    tuple val(meta), path("*.filt.fastq.gz"), path("${meta.id}.filter_stats.tsv"), path("filterAndTrim.args.txt"), emit: reads_logs_args
+    path "versions.yml", emit: versions
 
     when:
     task.ext.when == null || task.ext.when

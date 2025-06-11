@@ -315,16 +315,17 @@ workflow DETAXIZER_SIMPLIFIED {
     //
     if ( params.enable_filter ) {
 
-    ch_headers = RENAME_FASTQ_HEADERS_PRE.out.headers.map {
-        meta, path ->
-            return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
-    }
+        ch_headers = RENAME_FASTQ_HEADERS_PRE.out.headers.map {
+            meta, path ->
+                return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
+        }
 
-    ch_filtered2rename = FILTER.out.filtered.map {
-        meta, path ->
-            return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
-    }
+        ch_filtered2rename = FILTER.out.filtered.map {
+            meta, path ->
+                return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
+        }
 
+    }
     ch_removed2rename = Channel.empty()
 
     ch_rename_filtered = ch_filtered2rename.join(ch_headers, by:[0])
@@ -337,7 +338,6 @@ workflow DETAXIZER_SIMPLIFIED {
         ch_removed2rename.first()
     )
     ch_versions = ch_versions.mix(RENAME_FASTQ_HEADERS_AFTER.out.versions.first())
-    }
 
 
     //
