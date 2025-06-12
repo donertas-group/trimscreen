@@ -199,7 +199,8 @@ include { DADA2_RMCHIMERA                            } from '../../../modules/lo
 include { DADA2_STATS                                } from '../../../modules/local/ampliseq/dada2_stats_modified'
 include { DADA2_MERGE                                } from '../../../modules/local/ampliseq/dada2_merge_modified'
 include { DADA2_SPLITREGIONS                         } from '../../../modules/local/ampliseq/dada2_splitregions'
-include { MERGE_STATS as MERGE_STATS_STD            } from '../../../modules/local/ampliseq/merge_stats_modified'
+include { MERGE_STATS as MERGE_STATS_STD             } from '../../../modules/local/ampliseq/merge_stats_modified'
+include { WRITE_SINGLE_STATS                         } from '../../../modules/local/ampliseq/write_single_stats'
 include { MERGE_STATS as MERGE_STATS_FILTERSSU      } from '../../../modules/local/ampliseq/merge_stats_modified'
 include { MERGE_STATS as MERGE_STATS_FILTERLENASV   } from '../../../modules/local/ampliseq/merge_stats_modified'
 include { MERGE_STATS as MERGE_STATS_CODONS         } from '../../../modules/local/ampliseq/merge_stats_modified'
@@ -450,7 +451,8 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_stats = MERGE_STATS_STD.out.tsv // MERGE_STATS.out.tsv is modified to contain meta
         ch_versions = ch_versions.mix(MERGE_STATS_STD.out.versions)
     } else {
-        ch_stats = DADA2_MERGE.out.dada2stats//.map { meta, dada2stats -> tuple(meta, dada2stats) }
+        WRITE_SINGLE_STATS (DADA2_MERGE.out.dada2stats)
+        ch_stats = DADA2_MERGE.out.dada2stats //DADA2_MERGE.out.dada2stats//.map { meta, dada2stats -> tuple(meta, dada2stats) }
     }
 /*
     //
