@@ -60,7 +60,7 @@ process DADA2_STATS {
                 nochim_rowSums[order(rownames(nochim_rowSums)), ] )
         }
         colnames(track) <- c("DADA2_input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
-        rownames(track) <- sub(pattern = "\\\\.run.*_1.fastq.gz\$", replacement = "", rownames(track)) #this is when cutadapt is skipped! ## this is further modified to exclude run numbers from rownames
+        rownames(track) <- sub(pattern = "_1.fastq.gz\$", replacement = "", rownames(track)) #this is when cutadapt is skipped! 
         track <- cbind(sample = sub(pattern = "(.*?)\\\\..*\$", replacement = "\\\\1", rownames(track)), track)
         write.table( track, file = "${prefix}.stats.tsv", sep = "\\t", row.names = FALSE, quote = FALSE, na = '')
 
