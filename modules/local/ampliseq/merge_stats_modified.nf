@@ -21,6 +21,7 @@ process MERGE_STATS {
     script:
     """
     #!/usr/bin/env Rscript
+    
     x <- read.table(\"file1.tsv\", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
     y <- read.table(\"file2.tsv\", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 

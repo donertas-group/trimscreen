@@ -18,12 +18,12 @@ def main():
     args = parse_args()
 
     filtered_table_csv = args.input
-    metadata_tsv = args.metadata
+    metadata_csv = args.metadata
     taxlevels = args.taxlevels
 
     # Read the CSV file and metadata table into pandas DataFrames
     df0 = pd.read_csv(filtered_table_csv)
-    metadata = pd.read_csv(metadata_tsv, sep='\t')  # Assuming tab-separated values
+    metadata = pd.read_csv(metadata_csv)  
 
     # Filter out the samples that are not marked as 'sample' in the metadata table
     sample_ids = metadata[metadata['condition'] == 'sample']['ID'].values
