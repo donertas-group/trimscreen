@@ -44,7 +44,7 @@ workflow TRIMSCREEN {
 
     main:
 
-    if (!params.skip_host_removal) {
+    if (params.enable_filter) {
 
         DETAXIZER_SIMPLIFIED(ch_samplesheet)
         new_samplesheet = DETAXIZER_SIMPLIFIED.out.new_samplesheet

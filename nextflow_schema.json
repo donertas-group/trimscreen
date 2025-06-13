@@ -992,10 +992,6 @@
             "description": "",
             "default": "",
             "properties": {
-                "skip_host_removal": {
-                    "type": "boolean",
-                    "description": "If host/contaminant removal should be skipped with simplified detaxizer."
-                },
                 "skip_ampliseq_screening": {
                     "type": "boolean",
                     "description": "If screening trimming parameters with simplified ampliseq should be skipped."
