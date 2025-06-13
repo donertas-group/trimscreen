@@ -52,6 +52,8 @@ if ( !params.fasta_bbduk && params.classification_bbduk ) {
     ch_fasta_bbduk = Channel.fromPath(params.fasta_bbduk)
 }
 
+def ch_new_samplesheet = Channel.empty()
+
 workflow DETAXIZER_SIMPLIFIED {
     take:
     ch_samplesheet // channel: samplesheet read in from --input
@@ -325,42 +327,39 @@ workflow DETAXIZER_SIMPLIFIED {
                 return [ meta + [ id: meta.id.replaceAll("(_R1|_R2)", "") ], path ]
         }
 
-    }
-    ch_removed2rename = Channel.empty()
+        ch_removed2rename = Channel.empty()
 
-    ch_rename_filtered = ch_filtered2rename.join(ch_headers, by:[0])
-
-    ch_removed2rename = ch_removed2rename.ifEmpty(['empty', []])
+        ch_rename_filtered = ch_filtered2rename.join(ch_headers, by:[0])
+        ch_removed2rename = ch_removed2rename.ifEmpty(['empty', []])
 
 
-    RENAME_FASTQ_HEADERS_AFTER(
-        ch_rename_filtered,
-        ch_removed2rename.first()
-    )
-    ch_versions = ch_versions.mix(RENAME_FASTQ_HEADERS_AFTER.out.versions.first())
+        RENAME_FASTQ_HEADERS_AFTER (
+            ch_rename_filtered,
+            ch_removed2rename.first()
+        )
+        ch_versions = ch_versions.mix(RENAME_FASTQ_HEADERS_AFTER.out.versions.first())
 
 
-    //
-    // MODULE: Summarize the classification process
-    //
-    if (params.validation_blastn){
+        //
+        // MODULE: Summarize the classification process
+        //
+        if (params.validation_blastn){
 
-    ch_summary = ch_classification_summary.mix(ch_blastn_summary).collect().map {
-            item -> [['id': "summary_of_classification_and_blastn"], item]
+            ch_summary = ch_classification_summary.mix(ch_blastn_summary).collect().map {
+                item -> [['id': "summary_of_classification_and_blastn"], item]
+            }
+        } else {
+            ch_summary = ch_classification_summary.collect().map {
+                item -> [['id': "summary_of_classification"], item]
+            }
         }
-    } else {
-        ch_summary = ch_classification_summary.collect().map {
-            item -> [['id': "summary_of_classification"], item]
-        }
-    }
 
-    ch_summary = SUMMARIZER (ch_summary)
-    ch_versions = ch_versions.mix(ch_summary.versions)
+        ch_summary = SUMMARIZER (ch_summary)
+        ch_versions = ch_versions.mix(ch_summary.versions)
     
-   // if (params.generate_downstream_samplesheet){
         GENERATE_DOWNSTREAM_SAMPLESHEETS( RENAME_FASTQ_HEADERS_AFTER.out.fastq )
-   // }
-
+        ch_new_samplesheet = GENERATE_DOWNSTREAM_SAMPLESHEETS.out.samplesheet
+    }
     //
     // Collate and save software versions
     //
@@ -414,7 +413,7 @@ workflow DETAXIZER_SIMPLIFIED {
 
     emit:
     multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
-    new_samplesheet = GENERATE_DOWNSTREAM_SAMPLESHEETS.out.samplesheet
+    new_samplesheet = ch_new_samplesheet
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 
 }
