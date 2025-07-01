@@ -1,5 +1,5 @@
 process DADA2_MERGE {
-    label 'process_low'
+    label 'process_single'
 
     // https://depot.galaxyproject.org/singularity/bioconductor-dada2=1.28.0--r43hf17093f_0 doesnt contain 'digest', so keep here v1.22.0
     conda "bioconda::bioconductor-dada2=1.22.0 conda-forge::r-digest=0.6.30"

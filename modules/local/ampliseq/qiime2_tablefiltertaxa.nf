@@ -1,6 +1,6 @@
 process QIIME2_TABLEFILTERTAXA {
     tag "taxa:${exclude_taxa};min-freq:${min_frequency};min-samples:${min_samples}"
-    label 'process_low'
+    label 'process_single'
 
     container "qiime2/core:2023.7"
 

@@ -1,6 +1,6 @@
 process QIIME2_INTAX {
     tag "${tax}"
-    label 'process_low'
+    label 'process_single'
 
     container "qiime2/core:2023.7"
 

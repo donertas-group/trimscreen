@@ -1,6 +1,6 @@
 process QIIME2_ANCOM_TAX {
     tag "${table.baseName}-taxonomic_level:${taxlevel}"
-    label 'process_medium'
+    label 'process_single'
     label 'single_cpu'
 
     container "qiime2/core:2023.7"

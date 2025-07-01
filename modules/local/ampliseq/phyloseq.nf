@@ -1,6 +1,6 @@
 process PHYLOSEQ {
     tag "$prefix"
-    label 'process_low'
+    label 'process_single'
 
     conda "bioconda::bioconductor-phyloseq=1.46.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

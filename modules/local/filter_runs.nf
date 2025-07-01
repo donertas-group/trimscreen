@@ -1,6 +1,6 @@
 process FILTER_RUNS {
     tag "filter"
-    label "process_low"
+    label "process_single"
 
     conda "conda-forge::python=3.12.0 biopython=1.81 numpy=1.26.3 pandas=1.1.5 scikit-bio=0.4.2"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

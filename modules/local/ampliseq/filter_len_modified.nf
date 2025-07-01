@@ -1,6 +1,6 @@
 process FILTER_LEN {
     tag "${fasta},$meta.run"
-    label 'process_low'
+    label 'process_single'
 
     conda "bioconda::bioconductor-biostrings=2.58.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

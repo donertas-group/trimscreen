@@ -1,6 +1,6 @@
 process QIIME2_DIVERSITY_ADONIS {
     tag "${core.baseName}-${formula}"
-    label 'process_low'
+    label 'process_single'
 
     container "qiime2/core:2023.7"
 

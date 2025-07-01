@@ -1,5 +1,5 @@
 process QIIME2_DIVERSITY_CORE {
-    label 'process_low'
+    label 'process_single'
 
     container "qiime2/core:2023.7"
 

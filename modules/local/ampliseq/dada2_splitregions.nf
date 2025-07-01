@@ -1,5 +1,5 @@
 process DADA2_SPLITREGIONS {
-    label 'process_low'
+    label 'process_single'
 
     conda "conda-forge::r-base=4.2.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

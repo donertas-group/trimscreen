@@ -1,6 +1,6 @@
 process PICRUST {
     tag "${seq},${abund},${meta.runID}"
-    label 'process_medium'
+    label 'process_single'
 
     conda "bioconda::picrust2=2.5.3"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

@@ -1,5 +1,5 @@
 process ITSX_CUTASV {
-    label 'process_medium'
+    label 'process_single'
 
     conda "bioconda::itsx=1.1.3"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

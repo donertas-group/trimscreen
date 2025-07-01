@@ -1,5 +1,5 @@
 process QIIME2_TREE {
-    label 'process_medium'
+    label 'process_single'
 
     container "qiime2/core:2023.7"
 

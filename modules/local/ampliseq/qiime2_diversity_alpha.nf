@@ -1,6 +1,6 @@
 process QIIME2_DIVERSITY_ALPHA {
     tag "${core.baseName}"
-    label 'process_low'
+    label 'process_single'
 
     container "qiime2/core:2023.7"
 

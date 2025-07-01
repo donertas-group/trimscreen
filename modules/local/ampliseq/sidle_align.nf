@@ -1,6 +1,6 @@
 process SIDLE_ALIGN {
     tag "$meta.region"
-    label 'process_medium'
+    label 'process_single'
 
     container 'nf-core/pipesidle:0.1.0-beta'
 

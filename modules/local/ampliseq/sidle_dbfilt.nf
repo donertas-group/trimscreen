@@ -1,5 +1,5 @@
 process SIDLE_DBFILT {
-    label 'process_low'
+    label 'process_single'
 
     container 'nf-core/pipesidle:0.1.0-beta'
 

@@ -1,6 +1,6 @@
 process SBDIEXPORTREANNOTATE {
     tag "${taxonomytable}"
-    label 'process_low'
+    label 'process_single'
 
     conda "conda-forge::r-tidyverse=1.2.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

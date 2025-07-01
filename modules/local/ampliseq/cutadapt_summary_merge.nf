@@ -1,6 +1,6 @@
 process CUTADAPT_SUMMARY_MERGE {
     tag "${files}"
-    label 'process_low'
+    label 'process_single'
 
     conda "bioconda::bioconductor-dada2=1.30.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

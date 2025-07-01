@@ -1,6 +1,7 @@
 process DADA2_TAXONOMY {
     tag "${fasta},${database},${meta.run}"
-    label 'process_high'
+    label 'process_low'
+    label 'multiple_cpu'
 
     conda "bioconda::bioconductor-dada2=1.30.0"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

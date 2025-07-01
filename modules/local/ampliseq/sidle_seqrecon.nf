@@ -1,5 +1,5 @@
 process SIDLE_SEQRECON {
-    label 'process_medium'
+    label 'process_single'
     label 'single_cpu'
 
     container 'nf-core/pipesidle:0.1.0-beta'

@@ -1,6 +1,6 @@
 process QIIME2_INSEQ {
     tag "${seq}"
-    label 'process_low'
+    label 'process_single'
 
     container "qiime2/core:2023.7"
 

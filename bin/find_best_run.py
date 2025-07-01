@@ -39,19 +39,28 @@ def main():
     for sample in df['sample'].unique():
         sample_data = df[df['sample'] == sample]
 
-        # Find the best runs for Genus (all runs with the highest Genus value)
-        max2_value = sample_data[taxlevels[1]].max()
-        best2_rows = sample_data[sample_data[taxlevels[1]] == max2_value]
-        for _, row in best2_rows.iterrows():
-            best2_run_id = row['run']
-            best2_runs[best2_run_id] = best2_runs.get(best2_run_id, 0) + 1
+    # Sort rank2 values in descending order
+    best2_values = sorted(sample_data[taxlevels[1]].unique(), reverse=True)
 
-        # Find the best runs for Phylum (all runs with the highest Phylum value)
-        max1_value = sample_data[taxlevels[0]].max()
-        best1_rows = sample_data[sample_data[taxlevels[0]] == max1_value]
-        for _, row in best1_rows.iterrows():
-            best1_run_id = row['run']
-            best1_runs[best1_run_id] = best1_runs.get(best1_run_id, 0) + 1
+    for val in best2_values:
+        best2_rows = sample_data[sample_data[taxlevels[1]] == val]
+        if len(best2_rows) > 2:
+            for _, row in best2_rows.iterrows():
+                best2_run_id = row['run']
+                best2_runs[best2_run_id] = best2_runs.get(best2_run_id, 0) + 1
+            break 
+
+    # Sort rank1 values in descending order
+    best1_values = sorted(sample_data[taxlevels[0]].unique(), reverse=True)
+
+    for val in best1_values:
+        best1_rows = sample_data[sample_data[taxlevels[0]] == val]
+        if len(best2_rows) > 2:
+            for _, row in best1_rows.iterrows():
+                best1_run_id = row['run']
+                best1_runs[best1_run_id] = best1_runs.get(best1_run_id, 0) + 1
+            break  
+
 
     # Convert the dictionaries into DataFrames for easier ranking
     df2 = pd.DataFrame(list(best2_runs.items()), columns=['run', 'value'])
