@@ -339,9 +339,23 @@
                     "type": "string",
                     "default": "190:5:300",
                     "description": ".",
-                    "pattern": "^(\\d+:\\d+:\\d+|\\d+(,\\d+)*)$"}}
-
-        },
+                    "pattern": "^(\\d+:\\d+:\\d+|\\d+(,\\d+)*)$"},
+                "marker_size_min": {
+                    "type": "integer",
+                    "default": 440,
+                    "description": "Minimum amplicon size expected."},
+                "minimum_overlap": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Minimum overlap for paired-end reads merging."},
+                "step_size": {
+                    "type": "integer",
+                    "default": 2,
+                    "description": "Step size for truncation length screening."},
+                "read_length": {
+                    "type": "integer",
+                    "default": 250,
+                    "description": "Read length in raw fastq files."}}},   
         "sequencing_input": {
             "title": "Sequencing input",
             "type": "object",
