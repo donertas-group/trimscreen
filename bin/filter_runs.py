@@ -44,13 +44,13 @@ def filter_runs(df, columns):
             # Compute global stats for medians and stds
             median_mean = grouped['median'].mean()
             median_std = grouped['median'].std()
-            median_lower, median_upper = median_mean - 2 * median_std, median_mean + 2 * median_std
+            median_lower, median_upper = median_mean - 1 * median_std, median_mean + 1 * median_std
 
             std_mean = grouped['std'].mean()
             std_std = grouped['std'].std()
-            std_lower, std_upper = std_mean - 2 * std_std, std_mean + 2 * std_std
+            std_lower, std_upper = std_mean - 1 * std_std, std_mean + 1 * std_std
 
-            # Keep runs within 2-sigma bounds
+            # Keep runs within 1-sigma bounds
             filtered_multi = grouped[
                 (grouped['median'] >= median_lower) & (grouped['median'] <= median_upper) &
                 (grouped['std'] >= std_lower) & (grouped['std'] <= std_upper)
@@ -67,7 +67,7 @@ def filter_runs(df, columns):
             values = df_single[column]
             val_mean = values.mean()
             val_std = values.std()
-            lower, upper = val_mean - 2 * val_std, val_mean + 2 * val_std
+            lower, upper = val_mean - 1 * val_std, val_mean + 1 * val_std
 
             filtered_single = df_single[
                 (df_single[column] >= lower) & (df_single[column] <= upper)
@@ -102,7 +102,7 @@ def filter_runs_bad(df, columns):
         col_std = df[column].std()
 
         # Define 2-sigma bounds
-        lower, upper = col_mean - 2 * col_std, col_mean + 2 * col_std
+        lower, upper = col_mean - 1 * col_std, col_mean + 1 * col_std
 
         # Keep runs within 2-sigma bounds for this column
         filtered = df[(df[column] >= lower) & (df[column] <= upper)]
