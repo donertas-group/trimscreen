@@ -26,7 +26,7 @@ def main():
     args = parse_args()
 
     total_min = args.marker_size_min + args.minimum_overlap
-    min_val = args.minimum_overlap
+    min_val = 50 #args.minimum_overlap
     max_val = args.read_length
     step = args.step_size
 
