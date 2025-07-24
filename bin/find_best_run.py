@@ -4,6 +4,18 @@ import sys
 import math
 import argparse
 import json 
+from itertools import combinations
+
+def get_step(df):
+    # Extract the first three digits after 'run_' and convert to int
+    lenf = df['run'].str.extract(r'run_(\d{3})')[0].astype(int).unique().tolist()
+
+    # Generate all unique pairs and compute absolute differences
+    diffs = [abs(a - b) for a, b in combinations(lenf, 2)]
+
+    # Return the minimum difference
+    return min(diffs) if diffs else None
+
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Find the best run")
@@ -12,7 +24,7 @@ def parse_args(args=None):
     parser.add_argument("-t", "--taxlevels", required=True, nargs="+", help="Taxonomic levels on which runs are evaluated")
 
     return parser.parse_args()
- 
+
 
 def main():
     args = parse_args()
@@ -21,93 +33,58 @@ def main():
     metadata_csv = args.metadata
     taxlevels = args.taxlevels
 
-    # Read the CSV file and metadata table into pandas DataFrames
     df0 = pd.read_csv(filtered_table_csv)
-    metadata = pd.read_csv(metadata_csv)  
-
-    # Filter out the samples that are not marked as 'sample' in the metadata table
-    sample_ids = metadata[metadata['condition'] == 'sample']['ID'].values
-
-    # Filter df to keep only the rows with the matching sample IDs
-    df = df0[df0['sample'].isin(sample_ids)]
+    if metadata_csv is not None:
+        metadata = pd.read_csv(metadata_csv)
+        sample_ids = metadata[metadata['condition'] == 'sample']['ID'].values
+        df = df0[df0['sample'].isin(sample_ids)]
+    else:
+        df = df0
+    
+    # extract screening step
+    step = get_step(df)
+    N = math.ceil(5 / step) # min nruns for highest richness to be considered 
 
     # Initialize dictionaries to track best runs for Genus and Phylum
-    best1_runs = {}
-    best2_runs = {}
+    best_runs = {}
 
-    # Iterate over each sample to find the best runs based on Genus and Phylum
+    # Iterate over each sample to find its best runs based on two chosen ranks, e.g. Genus and Family
     for sample in df['sample'].unique():
         sample_data = df[df['sample'] == sample]
 
-    # Sort rank2 values in descending order
-    best2_values = sorted(sample_data[taxlevels[1]].unique(), reverse=True)
+        summary_table = (
+            sample_data
+            .groupby([taxlevels[1], taxlevels[0]])
+            .agg(nruns=('run', 'count'))
+            .sort_values(by=[taxlevels[1], taxlevels[0]], ascending=False)
+            .reset_index()
+            .query('nruns >= @N')
+        )
 
-    for val in best2_values:
-        best2_rows = sample_data[sample_data[taxlevels[1]] == val]
-        if len(best2_rows) > 2:
-            for _, row in best2_rows.iterrows():
-                best2_run_id = row['run']
-                best2_runs[best2_run_id] = best2_runs.get(best2_run_id, 0) + 1
-            break 
+        # Get the top Family + Genus values
+        if not summary_table.empty:
+            top_family = summary_table.iloc[0][taxlevels[0]]
+            top_genus = summary_table.iloc[0][taxlevels[1]]
+            best_rows = sample_data[(sample_data[taxlevels[1]] == top_genus) & (sample_data[taxlevels[0]] == top_family)]
+        else:
+            print(f"Best runs not found for sample {sample}.")
 
-    # Sort rank1 values in descending order
-    best1_values = sorted(sample_data[taxlevels[0]].unique(), reverse=True)
-
-    for val in best1_values:
-        best1_rows = sample_data[sample_data[taxlevels[0]] == val]
-        if len(best2_rows) > 2:
-            for _, row in best1_rows.iterrows():
-                best1_run_id = row['run']
-                best1_runs[best1_run_id] = best1_runs.get(best1_run_id, 0) + 1
-            break  
-
+    for _, row in best_rows.iterrows():
+        best_run_id = row['run']
+        best_runs[best_run_id] = best_runs.get(best_run_id, 0) + 1
 
     # Convert the dictionaries into DataFrames for easier ranking
-    df2 = pd.DataFrame(list(best2_runs.items()), columns=['run', 'value'])
-    df1 = pd.DataFrame(list(best1_runs.items()), columns=['run', 'value'])
+    summ = pd.DataFrame(list(best_runs.items()), columns=['run', 'counts']).sort_values(by='counts', ascending=False)
 
-    # Rank the runs for Genus (with ties having the same rank)
-    df2['rank'] = df2['value'].rank(method='min', ascending=False).astype(int)  # 'min' ties the rank
+    # output json formatted list as stdout
+    print(json.dumps([summ.iloc[0]['run']]))
 
-    # Rank the runs for Phylum (with ties having the same rank)
-    df1['rank'] = df1['value'].rank(method='min', ascending=False).astype(int)  # 'min' ties the rank
-
-    # Convert back to dictionaries
-    ranking2 = dict(zip(df2['run'], df2['rank']))
-    ranking1 = dict(zip(df1['run'], df1['rank']))
-
-    # Combine ranks
-    combined_ranks = {}
-    for run in set(ranking2.keys()).union(ranking1.keys()):
-        taxlevel2_rank = ranking2.get(run, len(ranking2) + 1)  # Assign lowest rank for missing runs
-        taxlevel1_rank = ranking1.get(run, len(ranking1) + 1)  # Assign lowest rank for missing runs
-        combined_ranks[run] = math.sqrt(taxlevel2_rank**2 + taxlevel1_rank**2)
-
-    # Find the minimum total rank value
-    min_rank = min(combined_ranks.values())
-
-    # Identify all runs with the minimum rank
-    bests = [(run, rank) for run, rank in combined_ranks.items() if rank == min_rank]
-    best_runs = [run for run, rank in bests[0:2]] # choose at most two best runs if there are more in tie
-    print(json.dumps(best_runs)) # output json formatted list as stdout
-
-    # Open the file for writing
+    # Open the file for writing the results
     with open('report.txt', 'w') as f:
 
-        # Output the results for the first taxonomic level
-        f.write(f"Runs with highest {taxlevels[0]}:\n")
-        for run, rank in sorted(ranking2.items(), key=lambda item: item[1])[:15]:
-            f.write(f"{run}, rank: {rank}, best for {best2_runs.get(run, 0)} samples\n")
-
-        # Output the results for the second taxonomic level
-        f.write(f"\nRuns with highest {taxlevels[1]}:\n")
-        for run, rank in sorted(ranking1.items(), key=lambda item: item[1])[:15]:
-            f.write(f"{run}, rank: {rank}, best for {best1_runs.get(run, 0)} samples\n")
-
-        # Print all the best runs
-        f.write("\nBest Runs:\n")
-        for run, rank in bests:
-            f.write(f"Run: {run}, Combined Rank: {rank}\n")
+        f.write(f"Runs giving highest richness at {taxlevels[0]} and {taxlevels[1]} levels:\n")
+        for _, row in summ.head(15).iterrows():
+            f.write(f"{row['run']}, best for {row['counts']} samples\n")
 
 
 if __name__ == "__main__":
