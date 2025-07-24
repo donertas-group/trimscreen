@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument("-M", "--mock", required=True, type=int, help="Mock community number")
     parser.add_argument("-r", "--run", required=True, type=str, help="Run ID")
     parser.add_argument("-R", "--rank", required=True, type=str, help="Taxonomic rank to compare (e.g., Genus)")
-    parser.add_argument("--true_composition_file", required=True, type=str, help="Path to true composition CSV file")
+    parser.add_argument("--true", required=True, type=str, help="Path to true composition CSV file")
     return parser.parse_args()
 
 def read_files(mock, run_id, true_comp_file):
@@ -94,7 +94,7 @@ def plot_results(x, correct, false, undetected, mock, run, rank):
     plt.xscale('log')
     plt.xlabel("Read number (log scale)")
     plt.ylabel(f"Number of taxa at rank '{rank}'")
-    plt.title(f"Taxon detection at {rank} level")
+    plt.title(f"Mock{mock}, taxon detection at {rank} level, {run}")
     plt.legend()
     plt.tight_layout()
     plt.grid(True)
@@ -105,7 +105,7 @@ def plot_results(x, correct, false, undetected, mock, run, rank):
 
 def main():
     args = parse_args()
-    asv_tax, asv_table, true_comp = read_files(args.mock, args.run, args.true_composition_file)
+    asv_tax, asv_table, true_comp = read_files(args.mock, args.run, args.true)
     taxon_reads, true_taxa = prepare_taxa_sets(asv_tax, asv_table, true_comp, args.rank)
     x, correct, false, undetected = evaluate_detection(taxon_reads, true_taxa)
     plot_results(x, correct, false, undetected, args.mock, args.run, args.rank)
