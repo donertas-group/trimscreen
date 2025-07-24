@@ -19,7 +19,7 @@ process FIND_BEST_RUN {
 
     script:
     """
-    find_best_run.py -i $table -m $metadata -t Phylum Genus
+    find_best_run.py -i $table -m $metadata -t Family Genus
     """
 
 }
