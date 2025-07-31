@@ -4,7 +4,7 @@ import itertools
 import pandas as pd
 import os
 import sys
-
+import numpy as np
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Generate trimming parameter combinations with constraints."
@@ -17,6 +17,10 @@ def parse_args():
                         help="Step size for generating f and r.")
     parser.add_argument("--read_length", type=int, required=True,
                         help="Maximum read length.")
+    parser.add_argument("--FW_primer_len", type=int, required=True,
+                        help="Forward primer length.")
+    parser.add_argument("--RV_primer_len", type=int, required=True,
+                        help="Reverse primer length.")
     parser.add_argument("--outdir", "-o", type=str, required=True,
                         help="Output directory.")
 
@@ -29,10 +33,12 @@ def main():
     min_val = 50 #args.minimum_overlap
     max_val = args.read_length
     step = args.step_size
+    f_len = args.FW_primer_len
+    r_len = args.RV_primer_len
 
     # Generate valid values for f and r
-    f_values = list(range(min_val, max_val + 1, step))
-    r_values = list(range(min_val, max_val + 1, step))
+    f_values = list((np.arange(min_val, max_val + 1, step) - f_len))
+    r_values = list((np.arange(min_val, max_val + 1, step) - r_len))
 
     # Filter combinations based on constraints
     valid_combinations = [
