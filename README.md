@@ -5,27 +5,16 @@
 
 **donertas-group/trimscreen** is a bioinformatics pipeline that systematically evaluate the influence of different trimming strategies on 16S amplicon sequencing data. This pipeline screens all possible combinations of forward and reverse read trimming lengths, ranging from no trimming to aggressive trimming that still ensures a minimum overlap between paired-end reads. By processing each combination through a standard bioinformatics workflow, the pipeline aims to identify the trimming lengths that maximize observed taxonomic richness. This approach provides a data-driven method to optimize preprocessing parameters and improve the accuracy and resolution of microbial community profiling.
 
-<!-- TODO nf-core: Include a figure that guides the user through the major workflow steps. Many nf-core
-     workflows use the "tube map" design for that. See https://nf-co.re/docs/contributing/design_guidelines#examples for examples.   -->
-<!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))2. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
-
 ## Usage
+First, prepare a samplesheet with the *full path* of your input data file that looks as follows. There should only be `A`-`Z`, `0`-`9` and `_` in sample names.
 
-> [!NOTE]
-> If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/usage/installation) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/usage/introduction#how-to-run-a-pipeline) with `-profile test` before running the workflow on actual data.
-
-<!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
-     Explain what rows and columns represent. For instance (please edit as appropriate):
--->
-First, prepare a samplesheet with the *full path* of your input data file that looks as follows. There should only be A-Z, 0-9 and `_` in sample names.
-
-`samplesheet.csv` (assuming you have two samples S10A, S10B and a control C01):
+`samplesheet.csv` (the examples below assumes you have two samples `S10A`, `S10B` and a control `C01`):
 
 ```csv
 sampleID,forwardReads,reverseReads
 S10A,/<full_path_to>/E10A_R1.fastq.gz,/<full_path_to>/E10A_R2.fastq.gz
 S10B,/<full_path_to>/E10B_R1.fastq.gz,/<full_path_to>/E10B_R2.fastq.gz
-C01,/<full_path_to>/control_R1.fastq.gz,/<full_path_to>/control_R2.fastq.gz,
+C01,/<full_path_to>/control_R1.fastq.gz,/<full_path_to>/control_R2.fastq.gz
 ```
 Each row represents a pair of fastq files (paired end). Single-end is not enabled for this pipeline. Do not change the header line.
 
