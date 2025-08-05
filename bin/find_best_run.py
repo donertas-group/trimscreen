@@ -40,50 +40,54 @@ def main():
         df = df0[df0['sample'].isin(sample_ids)]
     else:
         df = df0
-    
-    # extract screening step
+
     step = get_step(df)
-    N = math.ceil(5 / step) # min nruns for highest richness to be considered 
+    N = math.ceil(5 / step)
 
-    # Initialize dictionaries to track best runs for Genus and Phylum
-    best_runs = {}
+    def get_best_runs_by_sort_order(df, primary_tax, secondary_tax):
+        best_runs = {}
+        for sample in df['sample'].unique():
+            sample_data = df[df['sample'] == sample]
+            summary_table = (
+                sample_data
+                .groupby([primary_tax, secondary_tax])
+                .agg(nruns=('run', 'count'))
+                .sort_values(by=[primary_tax, secondary_tax], ascending=False)
+                .reset_index()
+                .query('nruns >= @N')
+            )
+            if not summary_table.empty:
+                top_primary = summary_table.iloc[0][primary_tax]
+                top_secondary = summary_table.iloc[0][secondary_tax]
+                best_rows = sample_data[
+                    (sample_data[primary_tax] == top_primary) &
+                    (sample_data[secondary_tax] == top_secondary)
+                ]
+                for _, row in best_rows.iterrows():
+                    best_run_id = row['run']
+                    best_runs[best_run_id] = best_runs.get(best_run_id, 0) + 1
+            else:
+                print(f"Best runs not found for sample {sample}.")
+        return pd.DataFrame(list(best_runs.items()), columns=['run', 'counts']).sort_values(by='counts', ascending=False)
 
-    # Iterate over each sample to find its best runs based on two chosen ranks, e.g. Genus and Family
-    for sample in df['sample'].unique():
-        sample_data = df[df['sample'] == sample]
-        summary_table = (
-            sample_data
-            .groupby([taxlevels[1], taxlevels[0]])
-            .agg(nruns=('run', 'count'))
-            .sort_values(by=[taxlevels[1], taxlevels[0]], ascending=False)
-            .reset_index()
-            .query('nruns >= @N')
-        )
-        # Get the top Family + Genus values
-        if not summary_table.empty:
-            top_family = summary_table.iloc[0][taxlevels[0]]
-            top_genus = summary_table.iloc[0][taxlevels[1]]
-            best_rows = sample_data[(sample_data[taxlevels[1]] == top_genus) & (sample_data[taxlevels[0]] == top_family)]
-        else:
-            print(f"Best runs not found for sample {sample}.")
+    # First: maximize taxlevels[1] (Genus before Family, for example)
+    summ_1 = get_best_runs_by_sort_order(df, taxlevels[1], taxlevels[0])
+    # Second: maximize taxlevels[0] (Family before Genus, for example)
+    summ_2 = get_best_runs_by_sort_order(df, taxlevels[0], taxlevels[1])
 
-        for _, row in best_rows.iterrows():
-            best_run_id = row['run']
-            best_runs[best_run_id] = best_runs.get(best_run_id, 0) + 1
+    # Print top run from first strategy as JSON
+    print(json.dumps([summ_1.iloc[0]['run']]))
 
-    # Convert the dictionaries into DataFrames for easier ranking
-    summ = pd.DataFrame(list(best_runs.items()), columns=['run', 'counts']).sort_values(by='counts', ascending=False)
-
-    # output json formatted list as stdout
-    print(json.dumps([summ.iloc[0]['run']]))
-
-    # Open the file for writing the results
     with open('report.txt', 'w') as f:
-
-        f.write(f"Runs giving highest richness at {taxlevels[0]} and {taxlevels[1]} levels:\n")
-        for _, row in summ.head(15).iterrows():
+        f.write(f"Runs giving highest richness by prioritizing {taxlevels[1]} > {taxlevels[0]}:\n")
+        for _, row in summ_1.head(15).iterrows():
             f.write(f"{row['run']}, best for {row['counts']} samples\n")
 
+        f.write("\n" + "-" * 60 + "\n\n")
+
+        f.write(f"Runs giving highest richness by prioritizing {taxlevels[0]} > {taxlevels[1]}:\n")
+        for _, row in summ_2.head(15).iterrows():
+            f.write(f"{row['run']}, best for {row['counts']} samples\n")
 
 if __name__ == "__main__":
     sys.exit(main())
