@@ -12,7 +12,7 @@ process DADA2_FILTNTRIM {
     tuple val(meta), path(reads), val(trunclenf), val(trunclenr)
 
     output:
-    tuple val(meta), path("*.filt.fastq.gz"), path("${meta.id}.filter_stats.tsv"), path("filterAndTrim.args.txt"), emit: reads_logs_args
+    tuple val(meta), path("${meta.id}_1.filt.fastq.gz"), path("${meta.id}_2.filt.fastq.gz"), path("${meta.id}.filter_stats.tsv"), path("filterAndTrim.args.txt"), emit: reads_logs_args
     path "versions.yml", emit: versions
 
     when:
