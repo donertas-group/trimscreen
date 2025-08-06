@@ -84,12 +84,16 @@ workflow DADA2_PREPROCESSING {
     //Filter empty files
     DADA2_FILTNTRIM.out.reads_logs_args
         .branch {
-            failed: it[0].single_end ? 
+/*            failed: it[0].single_end ? 
                         it[1].countFastq() < params.min_read_counts : 
                         it[1][0].countFastq() < params.min_read_counts || it[1][1].countFastq() < params.min_read_counts
             success: it[0].single_end ? 
                         it[1].countFastq() >= params.min_read_counts : 
                         it[1][0].countFastq() >= params.min_read_counts && it[1][1].countFastq() >= params.min_read_counts
+*/
+/* changed to paired_end only*/
+            failed: it[1][0].countFastq() < params.min_read_counts || it[1][1].countFastq() < params.min_read_counts
+            success: it[1][0].countFastq() >= params.min_read_counts && it[1][1].countFastq() >= params.min_read_counts
             passed: true
         }
         .set { ch_dada2_filtntrim_results }
