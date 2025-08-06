@@ -44,7 +44,7 @@ def main():
     step = get_step(df)
     N = math.ceil(5 / step)
 
-    def get_best_runs_by_sort_order(df, primary_tax, secondary_tax):
+    def get_best_runs_by_sort_order(df, primary_tax, secondary_tax, N):
         best_runs = {}
         for sample in df['sample'].unique():
             sample_data = df[df['sample'] == sample]
@@ -71,12 +71,12 @@ def main():
         return pd.DataFrame(list(best_runs.items()), columns=['run', 'counts']).sort_values(by='counts', ascending=False)
 
     # First: maximize taxlevels[1] (Genus before Family, for example)
-    summ_1 = get_best_runs_by_sort_order(df, taxlevels[1], taxlevels[0])
+    summ_1 = get_best_runs_by_sort_order(df, taxlevels[1], taxlevels[0], N)
     # Second: maximize taxlevels[0] (Family before Genus, for example)
-    summ_2 = get_best_runs_by_sort_order(df, taxlevels[0], taxlevels[1])
+    summ_2 = get_best_runs_by_sort_order(df, taxlevels[0], taxlevels[1], N)
 
     # Print top run from first strategy as JSON
-    print(json.dumps([summ_1.iloc[0]['run']]))
+    print(json.dumps([summ_1.iloc[0]['run'], summ_2.iloc[0]['run']]))
 
     with open('report.txt', 'w') as f:
         f.write(f"Runs giving highest richness by prioritizing {taxlevels[1]} > {taxlevels[0]}:\n")
