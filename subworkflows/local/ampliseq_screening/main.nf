@@ -7,17 +7,30 @@ workflow AMPLISEQ_SCREENING {
     
     main:
     // generate sets of parameters based on input ranges
-    
     FW_primer_len = params.FW_primer ? params.FW_primer.size() : 0
     RV_primer_len = params.RV_primer ? params.RV_primer.size() : 0
+
+    ch_read_length = ch_samplesheet
+            .first()
+            .map { meta, readfw, readrv -> 
+                // Return the first FASTA file (readfw)
+                return readfw
+            }
+            .splitFastq(record: true, limit: 1)
+            .map { record -> record.readString.length() }
+        
+    // Report extracted read length:
+    ch_read_length.view { "Read length extracted from samplesheet: $it" }
 
     GENERATE_PARAMS (
         params.marker_size_min, 
         params.minimum_overlap, 
         params.step_size, 
-        params.read_length,
+        ch_read_length,
         FW_primer_len,
-        RV_primer_len
+        RV_primer_len,
+        params.trunclenf_range,
+        params.trunclenr_range 
     )
 
     // create a channel with parameters as input to ampliseq (simplified from nf-core)
