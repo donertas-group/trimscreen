@@ -18,9 +18,9 @@ def process_run(summary_file, asv_file, tax_file, run, classifier_dir, ranks):
     """
     Process a single run directory to summarize ASV counts at specified taxonomic ranks.
     Parameters:
-    - asv_file: 'ASV_table.tsv'
-    - tax_file: 'ASV_tax_*.tsv'
-    - summary_file: 'overall_summary.tsv'
+    - asv_file: 'ASV_table.tsv.gz'
+    - tax_file: 'ASV_tax_*.tsv.gz'
+    - summary_file: 'overall_summary.tsv.gz'
     - ranks: a list of taxonomic ranks to analyse (e.g., 'Phylum', 'Class', etc.).
     Returns:
     - A DataFrame summarizing the proporatino of id'ed ASVs and the number of unique taxa at specified taxonomic ranks
@@ -33,7 +33,7 @@ def process_run(summary_file, asv_file, tax_file, run, classifier_dir, ranks):
         asv_table = pd.read_csv(asv_file, sep='\t', index_col=0)
         summary_table = pd.read_csv(summary_file, sep='\t', index_col=0)
     else:
-        print(f"{classifier_dir}, ASV_table.tsv, ASV_tax_*.tsv or overall_summary.tsv not found in {run}")
+        print(f"{classifier_dir}, ASV_table.tsv.gz, ASV_tax_*.tsv.gz or overall_summary.tsv.gz not found in {run}")
         return
 
     # Merge ASV and taxonomy tables on index (ASV)

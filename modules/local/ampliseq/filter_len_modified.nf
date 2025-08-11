@@ -11,11 +11,11 @@ process FILTER_LEN {
     tuple val(meta), path(fasta), path(table)
 
     output:
-    tuple val(meta), path( "stats.len.tsv" )      , emit: stats
-    tuple val(meta), path( "ASV_table.len.tsv" )  , emit: asv, optional: true
-    tuple val(meta), path( "ASV_seqs.len.fasta" ) , emit: fasta
-    tuple val(meta), path( "ASV_len_orig.tsv" )   , emit: len_orig
-    tuple val(meta), path( "ASV_len_filt.tsv" )   , emit: len_filt
+    tuple val(meta), path( "stats.len.tsv.gz" )      , emit: stats
+    tuple val(meta), path( "ASV_table.len.tsv.gz" )  , emit: asv, optional: true
+    tuple val(meta), path( "ASV_seqs.len.fasta.gz" ) , emit: fasta
+    tuple val(meta), path( "ASV_len_orig.tsv.gz" )   , emit: len_orig
+    tuple val(meta), path( "ASV_len_filt.tsv.gz" )   , emit: len_filt
     path "versions.yml"          , emit: versions
 
     when:
@@ -26,7 +26,7 @@ process FILTER_LEN {
     def max_len_asv = task.ext.max_len_asv ?: '1000000'
 
     def read_table  = table ? "table <- read.table(file = '$table', sep = '\t', comment.char = '', header=TRUE)" : "table <- data.frame(matrix(ncol = 1, nrow = 0))"
-    def asv_table_filtered  = table ? "ASV_table.len.tsv" : "empty_ASV_table.len.tsv"
+    def asv_table_filtered  = table ? "ASV_table.len.tsv.gz" : "empty_ASV_table.len.tsv.gz"
     """
     #!/usr/bin/env Rscript
 
@@ -53,16 +53,16 @@ process FILTER_LEN {
     distribution_after <- data.frame(Length=names(distribution_after),Counts=as.vector(distribution_after))
 
     #write
-    write.table(filtered_table, file = "$asv_table_filtered", row.names=FALSE, sep="\t", col.names = TRUE, quote = FALSE, na = '')
-    write.table(data.frame(s = sprintf(">%s\n%s", filtered_seq\$ID, filtered_seq\$sequence)), 'ASV_seqs.len.fasta', col.names = FALSE, row.names = FALSE, quote = FALSE, na = '')
-    write.table(distribution_before, file = "ASV_len_orig.tsv", row.names=FALSE, sep="\t", col.names = TRUE, quote = FALSE, na = '')
-    write.table(distribution_after, file = "ASV_len_filt.tsv", row.names=FALSE, sep="\t", col.names = TRUE, quote = FALSE, na = '')
+    write.table(filtered_table, file = gzfile("$asv_table_filtered"), row.names=FALSE, sep="\t", col.names = TRUE, quote = FALSE, na = '')
+    write.table(data.frame(s = sprintf(">%s\n%s", filtered_seq\$ID, filtered_seq\$sequence)), gzfile('ASV_seqs.len.fasta.gz'), col.names = FALSE, row.names = FALSE, quote = FALSE, na = '')
+    write.table(distribution_before, file = gzfile("ASV_len_orig.tsv.gz"), row.names=FALSE, sep="\t", col.names = TRUE, quote = FALSE, na = '')
+    write.table(distribution_after, file = gzfile("ASV_len_filt.tsv.gz"), row.names=FALSE, sep="\t", col.names = TRUE, quote = FALSE, na = '')
 
     #stats
     stats <- as.data.frame( t( rbind( colSums(table[-1]), colSums(filtered_table[-1]) ) ) )
     stats\$ID <- rownames(stats)
     colnames(stats) <- c("lenfilter_input","lenfilter_output", "sample")
-    write.table(stats, file = "stats.len.tsv", row.names=FALSE, sep="\t")
+    write.table(stats, file = gzfile("stats.len.tsv.gz"), row.names=FALSE, sep="\t")
 
     writeLines(c("\\"${task.process}\\":", paste0("    R: ", paste0(R.Version()[c("major","minor")], collapse = ".")),paste0("    Biostrings: ", packageVersion("Biostrings")) ), "versions.yml")
     """

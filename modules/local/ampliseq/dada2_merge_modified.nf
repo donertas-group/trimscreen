@@ -13,10 +13,10 @@ process DADA2_MERGE {
     tuple val(meta), path(rds)
 
     output:
-    tuple val(meta), path( "DADA2_stats.tsv" ), emit: dada2stats
-    tuple val(meta), path( "DADA2_table.tsv" ), emit: dada2asv
-    tuple val(meta), path( "ASV_table.tsv" ),   emit: asv
-    tuple val(meta), path( "ASV_seqs.fasta" ) , emit: fasta
+    tuple val(meta), path( "DADA2_stats.tsv.gz" ), emit: dada2stats
+    tuple val(meta), path( "DADA2_table.tsv.gz" ), emit: dada2asv
+    tuple val(meta), path( "ASV_table.tsv.gz" ),   emit: asv
+    tuple val(meta), path( "ASV_seqs.fasta.gz" ) , emit: fasta
     tuple val(meta), path( "DADA2_table.rds" ), emit: rds
     path "versions.yml",                        emit: versions
 
@@ -38,7 +38,7 @@ process DADA2_MERGE {
             rm(temp)
         }
     }
-    write.table( stats, file = "DADA2_stats.tsv", sep = "\\t", row.names = FALSE, col.names = TRUE, quote = FALSE, na = '')
+    write.table( stats, file = gzfile("DADA2_stats.tsv.gz"), sep = "\\t", row.names = FALSE, col.names = TRUE, quote = FALSE, na = '')
 
     #combine dada-class objects
     files <- sort(list.files(".", pattern = ".ASVtable.rds", full.names = TRUE))
@@ -59,14 +59,14 @@ process DADA2_MERGE {
     df <- df[,c(ncol(df),3:ncol(df)-1,1)]
 
     # file to publish
-    write.table(df, file = "DADA2_table.tsv", sep = "\\t", row.names = FALSE, quote = FALSE, na = '')
+    write.table(df, file = gzfile("DADA2_table.tsv.gz"), sep = "\\t", row.names = FALSE, quote = FALSE, na = '')
 
     # Write fasta file with ASV sequences to file
-    write.table(data.frame(s = sprintf(">%s\n%s", df\$ASV_ID, df\$sequence)), 'ASV_seqs.fasta', col.names = FALSE, row.names = FALSE, quote = FALSE, na = '')
+    write.table(data.frame(s = sprintf(">%s\n%s", df\$ASV_ID, df\$sequence)), gzfile('ASV_seqs.fasta.gz'), col.names = FALSE, row.names = FALSE, quote = FALSE, na = '')
 
     # Write ASV file with ASV abundances to file
     df\$sequence <- NULL
-    write.table(df, file = "ASV_table.tsv", sep="\\t", row.names = FALSE, quote = FALSE, na = '')
+    write.table(df, file = gzfile("ASV_table.tsv.gz"), sep="\\t", row.names = FALSE, quote = FALSE, na = '')
 
     writeLines(c("\\"${task.process}\\":", paste0("    R: ", paste0(R.Version()[c("major","minor")], collapse = ".")),paste0("    dada2: ", packageVersion("dada2")) ), "versions.yml")
     """

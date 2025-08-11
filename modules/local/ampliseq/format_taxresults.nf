@@ -20,7 +20,7 @@ process FORMAT_TAXRESULTS {
 
     script:
     """
-    add_full_sequence_to_taxfile.py $taxtable $fastafile $outfile
+    add_full_sequence_to_taxfile.modified.py $taxtable $fastafile $outfile
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -14,7 +14,7 @@ def get_step(df):
     diffs = [abs(a - b) for a, b in combinations(lenf, 2)]
 
     # Return the minimum difference
-    return min(diffs) if diffs else None
+    return min(diffs) if diffs else 5
 
 
 def parse_args(args=None):

@@ -13,9 +13,9 @@ process FILTER_SSU {
     path(barrnap_summary)
 
     output:
-    path( "stats.ssu.tsv" )      , emit: stats, optional: true
-    path( "ASV_table.ssu.tsv" )  , emit: asv, optional: true
-    path( "ASV_seqs.ssu.fasta" ) , emit: fasta
+    path( "stats.ssu.tsv.gz" )      , emit: stats, optional: true
+    path( "ASV_table.ssu.tsv.gz" )  , emit: asv, optional: true
+    path( "ASV_seqs.ssu.fasta.gz" ) , emit: fasta
     path "versions.yml"          , emit: versions
 
     when:
@@ -24,8 +24,8 @@ process FILTER_SSU {
     script:
     def kingdom = params.filter_ssu ?: "bac,arc,mito,euk"
     def read_table  = table ? "table <- read.table(file = '$table', sep = '\t', comment.char = '', header=TRUE)" : "table <- data.frame(matrix(ncol = 1, nrow = 0))"
-    def asv_table_filtered  = table ? "ASV_table.ssu.tsv" : "empty_ASV_table.ssu.tsv"
-    def stats_file = table ? "stats.ssu.tsv" : "empty_stats.ssu.tsv"
+    def asv_table_filtered  = table ? "ASV_table.ssu.tsv.gz" : "empty_ASV_table.ssu.tsv.gz"
+    def stats_file = table ? "stats.ssu.tsv.gz" : "empty_stats.ssu.tsv.gz"
     """
     #!/usr/bin/env Rscript
 
@@ -70,7 +70,7 @@ process FILTER_SSU {
 
     #write
     write.table(filtered_table, file = "$asv_table_filtered", row.names=FALSE, sep="\t", col.names = TRUE, quote = FALSE, na = '')
-    write.table(data.frame(s = sprintf(">%s\n%s", filtered_seq\$ID, filtered_seq\$sequence)), 'ASV_seqs.ssu.fasta', col.names = FALSE, row.names = FALSE, quote = FALSE, na = '')
+    write.table(data.frame(s = sprintf(">%s\n%s", filtered_seq\$ID, filtered_seq\$sequence)), gzfile('ASV_seqs.ssu.fasta.gz'), col.names = FALSE, row.names = FALSE, quote = FALSE, na = '')
 
     #stats
     stats <- as.data.frame( t( rbind( colSums(table[-1]), colSums(filtered_table[-1]) ) ) )

@@ -69,7 +69,7 @@ process DADA2_TAXONOMY {
     colnames(taxa_export) <- sub("tax.", "", colnames(taxa_export))
     rownames(taxa_export) <- names(seq)
 
-    write.table(taxa_export, file = \"$outfile\", sep = "\\t", row.names = FALSE, col.names = TRUE, quote = FALSE, na = '')
+    write.table(taxa_export, file = gzfile(\"$outfile\"), sep = "\\t", row.names = FALSE, col.names = TRUE, quote = FALSE, na = '')
 
     # Save a version with rownames for addSpecies
     taxa_export <- cbind( ASV_ID = tx\$ASV_ID, taxa\$tax, confidence = tx\$confidence)

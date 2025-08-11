@@ -11,8 +11,8 @@ process DADA2_SPLITREGIONS {
     path(table)
 
     output:
-    tuple val(meta), path( "DADA2_table_*.tsv" )                          , emit: dada2asv
-    tuple val(meta), path( "ASV_table_*.tsv" ), path( "ASV_seqs_*.fasta" ), emit: for_sidle
+    tuple val(meta), path( "DADA2_table_*.tsv.gz" )                          , emit: dada2asv
+    tuple val(meta), path( "ASV_table_*.tsv.gz" ), path( "ASV_seqs_*.fasta.gz" ), emit: for_sidle
     path "versions.yml"                                                   , emit: versions
 
     when:
@@ -49,14 +49,14 @@ process DADA2_SPLITREGIONS {
     df <- df[as.logical(rowSums(df[,2:(ncol(df)-1)] != 0)), ]
 
     # Write file with ASV abdundance and sequences to file
-    write.table(df, file = "DADA2_table_${suffix}.tsv", sep = "\\t", row.names = FALSE, quote = FALSE, na = '')
+    write.table(df, file = gzfile("DADA2_table_${suffix}.tsv.gz"), sep = "\\t", row.names = FALSE, quote = FALSE, na = '')
 
     # Write fasta file with ASV sequences to file
-    write.table(data.frame(s = sprintf(">%s\n%s", df\$ASV_ID, df\$sequence)), 'ASV_seqs_${suffix}.fasta', col.names = FALSE, row.names = FALSE, quote = FALSE, na = '')
+    write.table(data.frame(s = sprintf(">%s\n%s", df\$ASV_ID, df\$sequence)), gzfile('ASV_seqs_${suffix}.fasta.gz'), col.names = FALSE, row.names = FALSE, quote = FALSE, na = '')
 
     # Write ASV file with ASV abundances to file
     df\$sequence <- NULL
-    write.table(df, file = "ASV_table_${suffix}.tsv", sep="\\t", row.names = FALSE, quote = FALSE, na = '')
+    write.table(df, file = gzfile("ASV_table_${suffix}.tsv.gz"), sep="\\t", row.names = FALSE, quote = FALSE, na = '')
 
     writeLines(c("\\"${task.process}\\":", paste0("    R: ", paste0(R.Version()[c("major","minor")], collapse = "."))), "versions.yml")
     """
