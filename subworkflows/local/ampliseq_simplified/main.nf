@@ -244,8 +244,8 @@ include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/local/ampl
 include { DADA2_PREPROCESSING           } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
 include { DADA2_TAXONOMY_WF             } from '../../../subworkflows/local/ampliseq/dada2_taxonomy_wf'
 include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/local/ampliseq/phyloseq_workflow_modified'
-include { COMPARE_RUNS                  } from '../../../subworkflows/local/compare_runs/main'
-include { CREATE_LINK                   } from '../../../modules/local/create_link'
+//include { COMPARE_RUNS                  } from '../../../subworkflows/local/compare_runs/main'
+//include { CREATE_LINK                   } from '../../../modules/local/create_link'
 
 /*
 include { QIIME2_PREPTAX                } from '../../../subworkflows/ampliseq/qiime2_preptax'
@@ -726,7 +726,7 @@ workflow AMPLISEQ_SIMPLIFIED {
 
 
 
-    //
+    /*/
     // SUBWORKFLOW: Compare runs
     //
 
@@ -757,7 +757,7 @@ workflow AMPLISEQ_SIMPLIFIED {
             .set { ch_best_fasta }
          
     }// else {finish pipeline    }
-
+*/
 
 
 /*
@@ -927,15 +927,20 @@ workflow AMPLISEQ_SIMPLIFIED {
 
     run_qiime2=false //temporary
 
+/*  temporary commented out during moving compare_runs in parallel to ampliseq_simplified. Need to be added back.
+
     if ( params.picrust ) {
-       /* if ( run_qiime2 && !params.skip_abundance_tables && ( params.dada_ref_taxonomy || params.qiime_ref_taxonomy || params.qiime_ref_tax_custom || params.classifier || params.sintax_ref_taxonomy || params.kraken2_ref_taxonomy || params.kraken2_ref_tax_custom ) && !params.skip_taxonomy ) {
+       // if ( run_qiime2 && !params.skip_abundance_tables && ( params.dada_ref_taxonomy || params.qiime_ref_taxonomy || params.qiime_ref_tax_custom || params.classifier || params.sintax_ref_taxonomy || params.kraken2_ref_taxonomy || params.kraken2_ref_tax_custom ) && !params.skip_taxonomy ) {
             PICRUST ( QIIME2_EXPORT.out.abs_fasta, QIIME2_EXPORT.out.abs_tsv, "QIIME2", "This Picrust2 analysis is based on filtered reads from QIIME2" )
-        } else {
-            PICRUST ( ch_fasta, ch_dada2_asv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" ) */
+       // } else {
+        //    PICRUST ( ch_fasta, ch_dada2_asv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" ) 
         PICRUST ( ch_best_fasta, ch_best_tsv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" )        
         ch_best = PICRUST.out.args
         ch_versions = ch_versions.mix(PICRUST.out.versions.ifEmpty(null))
     } else { ch_best = ch_best_tsv }
+
+*/
+
 
 /*
     //
@@ -974,6 +979,8 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
     }*/
 
+
+/*  temporary commented out during moving compare_runs in parallel to ampliseq_simplified. Need to be added back.
     ch_tree_for_phyloseq = []
     PHYLOSEQ_WORKFLOW (
         ch_tax_for_phyloseq, 
@@ -993,7 +1000,10 @@ workflow AMPLISEQ_SIMPLIFIED {
         .collect().map { it[0] }
         .set {ch_best} 
     //ch_best = ch_tsv.collect().map { it[0] }
-    CREATE_LINK ( ch_best )
+*/  
+
+// Remove CREATE_LINK as it's now handled in AMPLISEQ_SCREENING
+  //CREATE_LINK ( ch_best )
 
 
 
@@ -1166,9 +1176,9 @@ workflow AMPLISEQ_SIMPLIFIED {
     runs_summary   =  ch_stats
     runs_asv_table =  DADA2_MERGE.out.asv
     runs_asv_tax   =  DADA2_TAXONOMY_WF.out.tax
-
-    multiqc_report = ch_multiqc_report_list      // MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
-    versions       = ch_versions                 // channel: [ path(versions.yml) ]
+    runs_asv_fasta =  ch_fasta 
+    multiqc_report =  ch_multiqc_report_list      // MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
+    versions       =  ch_versions                 // channel: [ path(versions.yml) ]
 }
 
 /*
