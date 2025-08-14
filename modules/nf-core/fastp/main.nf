@@ -6,6 +6,22 @@ process FASTP {
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/fastp:0.23.4--h5f740d0_0' :
         'biocontainers/fastp:0.23.4--h5f740d0_0' }"
+    
+    publishDir "${params.outdir}/runs/${meta.runID}/fastp/${meta.id}",
+        mode: params.publish_dir_mode,
+        pattern: "*.{html,json}",
+        enabled:  params.save_intermediates && "${meta.is_best_run}
+              
+             
+    publishDir "${params.outdir}/runs/${meta.runID}/fastp/${meta.id}" },
+        mode: params.publish_dir_mode,
+        pattern: "*.fastq.gz",
+        enabled: params.save_clipped_reads && "${meta.is_best_run}
+        
+
+
+
+
 
     input:
     tuple val(meta), path(reads)

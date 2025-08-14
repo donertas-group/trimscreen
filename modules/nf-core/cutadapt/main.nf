@@ -7,6 +7,12 @@ process CUTADAPT {
         'https://depot.galaxyproject.org/singularity/cutadapt:4.6--py39hf95cd2a_1' :
         'biocontainers/cutadapt:4.6--py39hf95cd2a_1' }"
 
+    publishDir "${params.outdir}/runs/${meta.runID}/cutadapt",
+        mode: params.publish_dir_mode,
+        pattern: "*.log",
+        enabled:  "${meta.is_best_run }"
+
+
     input:
     tuple val(meta), path(reads)
 

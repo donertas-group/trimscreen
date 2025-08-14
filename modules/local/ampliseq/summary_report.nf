@@ -6,6 +6,10 @@ process SUMMARY_REPORT  {
         'https://depot.galaxyproject.org/singularity/mulled-v2-b2ec1fea5791d428eebb8c8ea7409c350d31dada:a447f6b7a6afde38352b24c30ae9cd6e39df95c4-1' :
         'biocontainers/mulled-v2-b2ec1fea5791d428eebb8c8ea7409c350d31dada:a447f6b7a6afde38352b24c30ae9cd6e39df95c4-1' }"
 
+    publishDir "${params.outdir}/runs/${meta.runID}/summary_report",
+        mode: params.publish_dir_mode,
+        enabled:  "${meta.is_best_run}"
+
     input:
     path(report_template)
     path(report_styles)

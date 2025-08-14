@@ -8,6 +8,12 @@ process DADA2_MERGE {
         'https://depot.galaxyproject.org/singularity/bioconductor-dada2:1.22.0--r41h399db7b_0' :
         'biocontainers/bioconductor-dada2:1.22.0--r41h399db7b_0' }"
 
+    publishDir "${params.outdir}/runs/${meta.runID}/dada2",
+        mode: params.publish_dir_mode,
+        saveAs: { filename -> filename == 'versions.yml' ? null : filename },
+        enabled: "${ meta.is_best_run}"
+
+
     input:
     tuple val(meta), path(files)
     tuple val(meta), path(rds)

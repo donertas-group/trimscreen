@@ -7,6 +7,13 @@ process FILTER_LEN {
         'https://depot.galaxyproject.org/singularity/bioconductor-biostrings:2.58.0--r40h037d062_0' :
         'biocontainers/bioconductor-biostrings:2.58.0--r40h037d062_0' }"
 
+    publishDir "${params.outdir}/runs/${meta.runID}/asv_length_filter",
+        mode: params.publish_dir_mode,
+        saveAs: { filename -> filename == 'versions.yml' ? null : filename },
+        enabled:  "${meta.is_best_run}"
+
+
+
     input:
     tuple val(meta), path(fasta), path(table)
 

@@ -8,6 +8,28 @@ process DADA2_ERR {
         'https://depot.galaxyproject.org/singularity/bioconductor-dada2:1.30.0--r43hf17093f_0' :
         'biocontainers/bioconductor-dada2:1.30.0--r43hf17093f_0' }"
 
+    publishDir "${params.outdir}/runs/${meta.runID}/dada2/QC",
+        mode: params.publish_dir_mode,
+        pattern: "*{.pdf,convergence.txt}",
+        enabled: "${ meta.is_best_run }"
+
+    publishDir "${params.outdir}/runs/${meta.runID}/dada2/QC/svg",
+        mode: params.publish_dir_mode,
+        pattern: "*.svg",
+        enabled: "${ meta.is_best_run }"
+
+    publishDir "${params.outdir}/runs/${meta.runID}/dada2/args",
+        mode: params.publish_dir_mode,
+        pattern: "*.args.txt",
+        enabled: "${ meta.is_best_run }"
+
+    publishDir "${params.outdir}/runs/${meta.runID}/dada2/log",
+        mode: params.publish_dir_mode,
+        pattern: "*.log",
+        enabled: "${ meta.is_best_run }"
+
+
+
     input:
     tuple val(meta), path(reads)
 

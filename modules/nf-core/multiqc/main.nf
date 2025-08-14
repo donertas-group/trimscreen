@@ -6,6 +6,11 @@ process MULTIQC {
         'https://depot.galaxyproject.org/singularity/multiqc:1.27--pyhdfd78af_0' :
         'biocontainers/multiqc:1.27--pyhdfd78af_0' }"
 
+    publishDir "${params.outdir}/runs/${meta.runID}/multiqc",
+        mode: params.publish_dir_mode,
+        saveAs: { filename -> filename == 'versions.yml' ? null : filename },
+        enabled:  "${meta.is_best_run}"
+
     input:
     path  multiqc_files, stageAs: "?/*"
     path(multiqc_config)
