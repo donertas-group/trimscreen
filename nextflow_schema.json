@@ -29,6 +29,10 @@
                     "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
                     "fa_icon": "fas fa-folder-open"
                 },
+                "publish_all_runs": {
+                    "type": "boolean",
+                    "description": "If outputs of all runs screened should be published to ourdir."
+                },
                 "FW_primer": {
                     "type": "string",
                     "description": "Forward primer sequence",
