@@ -360,8 +360,8 @@ workflow AMPLISEQ_SIMPLIFIED {
     //
     RENAME_RAW_DATA_FILES.out.fastq
         .combine(ch_params)
-        .map { meta, reads, runID, trunclenf, trunclenr -> 
-        def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr]  
+        .map { meta, reads, runID, trunclenf, trunclenr, is_best_run -> 
+        def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr, is_best_run: is_best_run]  
         tuple(new_meta, reads)}
         .set{ ch_renamed_w_params }
 
