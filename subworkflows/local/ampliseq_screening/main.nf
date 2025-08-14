@@ -1,4 +1,5 @@
 include { AMPLISEQ_SIMPLIFIED                                       } from '../ampliseq_simplified/main'
+include { AMPLISEQ_SIMPLIFIED as AMPLISEQ_SIMPLIFIED_RERUN } from '../ampliseq_simplified/main'
 include { GENERATE_PARAMS                                           } from '../../../modules/local/generate_params'
 include { COMPARE_RUNS                  } from '../../../subworkflows/local/compare_runs/main'
 include { CREATE_LINK                   } from '../../../modules/local/create_link'
@@ -38,7 +39,10 @@ workflow AMPLISEQ_SCREENING {
     // create a channel with parameters as input to ampliseq (simplified from nf-core)
     ch_params = GENERATE_PARAMS.out.params_csv
     .splitCsv(header: true, sep: ',')
-    .map { row -> tuple(row.runID, row.trunclenf, row.trunclenr) }
+    .map { row -> 
+           def is_best_run = params.publish_all_runs
+           return tuple(row.runID, row.trunclenf, row.trunclenr, is_best_run) } // initiallise is_best_run to the same as params.publish_all_runs
+
 
     AMPLISEQ_SIMPLIFIED(ch_samplesheet, ch_params)
  
@@ -72,16 +76,39 @@ workflow AMPLISEQ_SCREENING {
             .map { runID, meta, file, _ -> [meta, file] }
             .set { ch_best_fasta }
 
-        // Create links to best runs
-        ch_best_tsv.collect().map { it[0] }
-            .set { ch_best_for_link }
-        CREATE_LINK ( ch_best_for_link )
 
     } else {
         // If comparison is skipped, use all runs
         ch_best_tsv = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
         ch_best_fasta = AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
     }
+
+    if (!params.publish_all_runs) {
+        // Create updated metadata channel with is_best_run = true for best runs
+        ch_best_run_formatted = ch_best_run
+        .map { runID -> [runID, true] }        
+
+
+        ch_params_best = ch_params
+            .map {runID, trunclenf, trunclenr, is_best_run -> [runID, trunclenf, trunclenr] }
+            .join( ch_best_run_formatted)
+        ch_params_best.view()
+
+        // Re-run AMPLISEQ_SIMPLIFIED with updated metadata (will use cached results but publish properly)
+        AMPLISEQ_SIMPLIFIED(ch_samplesheet, ch_params_best)
+        
+        // Update the output channels to use the second run's outputs
+        ch_best_tsv = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
+        ch_best_fasta = AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
+    
+    }
+
+    // Create links to best runs
+    ch_best_tsv.collect().map { it[0] }
+        .set { ch_best_for_link }
+    CREATE_LINK ( ch_best_for_link )
+
+
 
     /*emit:
     runs_summary     = AMPLISEQ_SIMPLIFIED.out.runs_summary
