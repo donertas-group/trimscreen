@@ -5,7 +5,21 @@
 
 **donertas-group/trimscreen** is a bioinformatics pipeline that systematically evaluate the influence of different trimming strategies on 16S amplicon sequencing data. This pipeline screens all possible combinations of forward and reverse read trimming lengths, ranging from no trimming to aggressive trimming that still ensures a minimum overlap between paired-end reads. By processing each combination through a standard bioinformatics workflow, the pipeline aims to identify the trimming lengths that maximize observed taxonomic richness. This approach provides a data-driven method to optimize preprocessing parameters and improve the accuracy and resolution of microbial community profiling.
 
-## Usage
+## Download and usage
+Create a project directory and then download the `dev` branch 
+
+```bash
+mkdir $your_project
+cd $your_project
+git clone -b dev --single-branch https://github.com/donertas-group/trimscreen.git
+```
+
+After having all input files ready (see below), the pipeline can run with the command:
+```bash
+nextflow run trimscreen -w work --outdir output --input input/samplesheet.csv -profile test,apptainer -params-file input/params.yaml --metadata test/input/metadata.csv
+```
+
+Preparing for input files:
 First, prepare a samplesheet with the *full path* of your input data file that looks as follows. There should only be `A`-`Z`, `0`-`9` and `_` in sample names.
 
 `samplesheet.csv` (the examples below assumes you have two samples `S10A`, `S10B` and a control `C01`):
@@ -39,16 +53,20 @@ validation_blastn: true
 fasta_blastn: '/scratch/shire/data/nj/reference/genome/nothobranchius_furzeri/NfurGRZ-RIMD1/GCF_043380555.1_NfurGRZ-RIMD1_genomic.fna.gz'
 fasta_bbduk: '/scratch/shire/data/nj/reference/genome/nothobranchius_furzeri/NfurGRZ-RIMD1/GCF_043380555.1_NfurGRZ-RIMD1_genomic.fna.gz'
 
-read_length: 300
 FW_primer: 'CAATGGRSGVRASYCTGAHS'
 RV_primer: 'AGGGTATCTAATCCT'
-marker_size_min: 300
+marker_size_min: 440
 minimum_overlap: 50
 step_size: 5
 
 dada_ref_taxonomy: "silva=138"
-min_len_asv: 300
+min_len_asv: 200
 max_len_asv: 500
+trunclenf_range: 216:2:220
+trunclenr_range: 246:2:250
+
+publish_all_runs: false
+picrust: true
 ```
 `enable_filter`: whether host sequence removal should be performed. If set to `true`:
 `classification_bbduk`: whether bbduk should be run.
