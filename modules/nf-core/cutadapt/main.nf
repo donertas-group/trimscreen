@@ -10,7 +10,7 @@ process CUTADAPT {
     publishDir "${params.outdir}/runs/${meta.runID}/cutadapt",
         mode: params.publish_dir_mode,
         pattern: "*.log",
-        enabled:  "${meta.is_best_run }"
+        enabled: "${meta.is_best_run || params.publish_all_runs}"
 
 
     input:

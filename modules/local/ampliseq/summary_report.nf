@@ -8,7 +8,7 @@ process SUMMARY_REPORT  {
 
     publishDir "${params.outdir}/runs/${meta.runID}/summary_report",
         mode: params.publish_dir_mode,
-        enabled:  "${meta.is_best_run}"
+        enabled: "${meta.is_best_run || params.publish_all_runs}"
 
     input:
     path(report_template)

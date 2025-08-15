@@ -11,22 +11,22 @@ process DADA2_ERR {
     publishDir "${params.outdir}/runs/${meta.runID}/dada2/QC",
         mode: params.publish_dir_mode,
         pattern: "*{.pdf,convergence.txt}",
-        enabled: "${ meta.is_best_run }"
+        enabled: "${meta.is_best_run || params.publish_all_runs}"
 
     publishDir "${params.outdir}/runs/${meta.runID}/dada2/QC/svg",
         mode: params.publish_dir_mode,
         pattern: "*.svg",
-        enabled: "${ meta.is_best_run }"
+        enabled: "${meta.is_best_run || params.publish_all_runs}"
 
     publishDir "${params.outdir}/runs/${meta.runID}/dada2/args",
         mode: params.publish_dir_mode,
         pattern: "*.args.txt",
-        enabled: "${ meta.is_best_run }"
+        enabled: "${meta.is_best_run || params.publish_all_runs}"
 
     publishDir "${params.outdir}/runs/${meta.runID}/dada2/log",
         mode: params.publish_dir_mode,
         pattern: "*.log",
-        enabled: "${ meta.is_best_run }"
+        enabled: "${meta.is_best_run || params.publish_all_runs}"
 
 
 

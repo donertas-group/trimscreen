@@ -8,13 +8,10 @@ process DADA2_FILTNTRIM {
         'https://depot.galaxyproject.org/singularity/bioconductor-dada2:1.30.0--r43hf17093f_0' :
         'biocontainers/bioconductor-dada2:1.30.0--r43hf17093f_0' }"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/args", 
-        mode: "$params.publish_dir_mode", 
-        pattern: "*.args.txt", 
-        enabled: "${meta.is_best_run}"
-        
-
-
+    publishDir "${params.outdir}/runs/${meta.runID}/dada2/args",
+        mode: "$params.publish_dir_mode",
+        pattern: "*.args.txt",
+        enabled: "${meta.is_best_run || params.publish_all_runs}"
 
     input:
     tuple val(meta), path(reads), val(trunclenf), val(trunclenr)
