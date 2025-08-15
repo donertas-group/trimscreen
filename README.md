@@ -9,8 +9,8 @@
 Create a project directory and then download the `dev` branch 
 
 ```bash
-mkdir $your_project
-cd $your_project
+mkdir <YOUR_DIR>
+cd <YOUR_DIR>
 git clone -b dev --single-branch https://github.com/donertas-group/trimscreen.git
 ```
 
@@ -72,7 +72,6 @@ Parameters required for setting trimming length screening:
 Now, you can run the pipeline using:
 
 ```bash
-mkdir <YOUR_DIR>; cd <YOUR_DIR>
 git clone -b dev --single-branch https://github.com/donertas-group/trimscreen.git
 nextflow run trimscreen \
     -profile test,apptainer \
