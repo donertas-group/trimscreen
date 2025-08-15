@@ -26,8 +26,7 @@ process PICRUST {
     tuple val(meta), path("message.txt")  , emit: message
 
     when:
-    task.ext.when == null || task.ext.when
-
+    meta.is_best_run == true
     script:
     def args = task.ext.args ?: ''
     """
@@ -37,9 +36,18 @@ process PICRUST {
         tail -n +2 "$abund" > "${abund}.tmp" && mv "${abund}.tmp" "$abund"
     fi
 
+    # Decompress if needed and pipe to a temporary file
+    if [[ ${seq} == *.gz ]]; then
+        gunzip -c ${seq} > temp_fasta.fa
+        FASTA="temp_fasta.fa"
+    else
+        FASTA="${seq}"
+    fi
+
+
     picrust2_pipeline.py \\
         $args \\
-        -s $seq \\
+        -s \$FASTA \\
         -i $abund \\
         -o all_output \\
         -p $task.cpus \\

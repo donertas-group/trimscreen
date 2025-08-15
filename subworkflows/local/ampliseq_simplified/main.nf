@@ -726,39 +726,6 @@ workflow AMPLISEQ_SIMPLIFIED {
 
 
 
-    /*/
-    // SUBWORKFLOW: Compare runs
-    //
-
-    //ch_stats_to_compare  =  MERGE_STATS_STD.out.tsv
-    ch_stats_to_compare  =  ch_stats
-    ch_asv_to_compare =  DADA2_MERGE.out.asv
-    ch_tax_to_compare  =  DADA2_TAXONOMY_WF.out.tax
-
-
-    if (!params.skip_run_comparison) {
-        COMPARE_RUNS ( ch_stats_to_compare, ch_asv_to_compare, ch_tax_to_compare )
-
-        COMPARE_RUNS.out
-            .map{ stdout, report -> stdout }
-            .splitJson()
-            .flatten()
-            .set{ ch_best_run }
-
-        ch_dada2_asv
-            .map { meta, file -> [meta.runID, meta, file] }
-            .join( ch_best_run.map { runID -> [runID, true] }, by: 0)
-            .map { runID, meta, file, _ -> [meta, file] }
-            .set { ch_best_tsv }
-        ch_fasta
-            .map { meta, file -> [meta.runID, meta, file] }
-            .join( ch_best_run.map { runID -> [runID, true] }, by: 0)
-            .map { runID, meta, file, _ -> [meta, file] }
-            .set { ch_best_fasta }
-         
-    }// else {finish pipeline    }
-*/
-
 
 /*
     //
@@ -915,7 +882,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     }
 */
 
-    // Yi added
+    // YW added
     ch_kraken2_tax = Channel.empty()
     ch_sintax_tax = Channel.empty()
     ch_pplace_tax = Channel.empty()
@@ -927,19 +894,14 @@ workflow AMPLISEQ_SIMPLIFIED {
 
     run_qiime2=false //temporary
 
-/*  temporary commented out during moving compare_runs in parallel to ampliseq_simplified. Need to be added back.
-
     if ( params.picrust ) {
        // if ( run_qiime2 && !params.skip_abundance_tables && ( params.dada_ref_taxonomy || params.qiime_ref_taxonomy || params.qiime_ref_tax_custom || params.classifier || params.sintax_ref_taxonomy || params.kraken2_ref_taxonomy || params.kraken2_ref_tax_custom ) && !params.skip_taxonomy ) {
-            PICRUST ( QIIME2_EXPORT.out.abs_fasta, QIIME2_EXPORT.out.abs_tsv, "QIIME2", "This Picrust2 analysis is based on filtered reads from QIIME2" )
+        //    PICRUST ( QIIME2_EXPORT.out.abs_fasta, QIIME2_EXPORT.out.abs_tsv, "QIIME2", "This Picrust2 analysis is based on filtered reads from QIIME2" )
        // } else {
-        //    PICRUST ( ch_fasta, ch_dada2_asv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" ) 
-        PICRUST ( ch_best_fasta, ch_best_tsv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" )        
-        ch_best = PICRUST.out.args
-        ch_versions = ch_versions.mix(PICRUST.out.versions.ifEmpty(null))
-    } else { ch_best = ch_best_tsv }
-
-*/
+        PICRUST ( ch_fasta, ch_dada2_asv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" ) 
+      //  ch_best = PICRUST.out.args
+        ch_versions = ch_versions.mix(PICRUST.out.versions)
+    } 
 
 
 /*
@@ -1002,8 +964,6 @@ workflow AMPLISEQ_SIMPLIFIED {
     //ch_best = ch_tsv.collect().map { it[0] }
 */  
 
-// Remove CREATE_LINK as it's now handled in AMPLISEQ_SCREENING
-  //CREATE_LINK ( ch_best )
 
 
 
