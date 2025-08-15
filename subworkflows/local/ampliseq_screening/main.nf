@@ -40,7 +40,7 @@ workflow AMPLISEQ_SCREENING {
     ch_params = GENERATE_PARAMS.out.params_csv
     .splitCsv(header: true, sep: ',')
     .map { row -> 
-           def is_best_run = params.publish_all_runs
+           def is_best_run = false//params.publish_all_runs
            return tuple(row.runID, row.trunclenf, row.trunclenr, is_best_run) } // initiallise is_best_run to the same as params.publish_all_runs
 
 
@@ -95,11 +95,11 @@ workflow AMPLISEQ_SCREENING {
         ch_params_best.view()
 
         // Re-run AMPLISEQ_SIMPLIFIED with updated metadata (will use cached results but publish properly)
-        AMPLISEQ_SIMPLIFIED(ch_samplesheet, ch_params_best)
+        AMPLISEQ_SIMPLIFIED_RERUN(ch_samplesheet, ch_params_best)
         
         // Update the output channels to use the second run's outputs
-        ch_best_tsv = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
-        ch_best_fasta = AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
+        ch_best_tsv = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_table
+        ch_best_fasta = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_fasta
     
     }
 
