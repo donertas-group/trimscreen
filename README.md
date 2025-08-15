@@ -14,11 +14,6 @@ cd $your_project
 git clone -b dev --single-branch https://github.com/donertas-group/trimscreen.git
 ```
 
-After having all input files ready (see below), the pipeline can run with the command:
-```bash
-nextflow run trimscreen -w work --outdir output --input input/samplesheet.csv -profile test,apptainer -params-file input/params.yaml --metadata test/input/metadata.csv
-```
-
 Preparing for input files:
 First, prepare a samplesheet with the *full path* of your input data file that looks as follows. There should only be `A`-`Z`, `0`-`9` and `_` in sample names.
 
@@ -56,12 +51,8 @@ fasta_bbduk: '/scratch/shire/data/nj/reference/genome/nothobranchius_furzeri/Nfu
 FW_primer: 'CAATGGRSGVRASYCTGAHS'
 RV_primer: 'AGGGTATCTAATCCT'
 marker_size_min: 440
-minimum_overlap: 50
 step_size: 5
 
-dada_ref_taxonomy: "silva=138"
-min_len_asv: 200
-max_len_asv: 500
 trunclenf_range: 216:2:220
 trunclenr_range: 246:2:250
 
@@ -74,22 +65,19 @@ picrust: true
 `fasta_bbduk` and `fasta_blastn` are the reference genome of the host.
 
 Parameters required for setting trimming length screening:
-`read_length`: number of cycles, i.e. length of raw sequencing read.
 `marker_size_min`: minimum size of the expected marker amplicon. E.g. for 16s V4, expected marker size is 280 to 400 bp.
 `step_size`: Difference between two adjacent trimming lengths to be screened, can be set to 1 to 10.
-`minimum_overlap`: minimum overlapping length (bp) of paried reads, default 50, should not be smaller than 20.
 
 
 Now, you can run the pipeline using:
 
 ```bash
 mkdir <YOUR_DIR>; cd <YOUR_DIR>
-git clone https://github.com/donertas-group/trimscreen.git
+git clone -b dev --single-branch https://github.com/donertas-group/trimscreen.git
 nextflow run trimscreen \
     -profile test,apptainer \
     --outdir <OUTDIR> \
     --input <INPUT_DIR>/samplesheet.csv \
-    --run_host_removal true \
     -params-file <INPUT_DIR>/params.yaml \
     --metadata <INPUT_DIR>/metadata.tsv
 ```
