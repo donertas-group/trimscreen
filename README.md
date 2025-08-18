@@ -48,6 +48,7 @@ validation_blastn: true
 fasta_blastn: '/scratch/shire/data/nj/reference/genome/nothobranchius_furzeri/NfurGRZ-RIMD1/GCF_043380555.1_NfurGRZ-RIMD1_genomic.fna.gz'
 fasta_bbduk: '/scratch/shire/data/nj/reference/genome/nothobranchius_furzeri/NfurGRZ-RIMD1/GCF_043380555.1_NfurGRZ-RIMD1_genomic.fna.gz'
 
+dada_ref_taxonomy: "silva=138.2"
 FW_primer: 'CAATGGRSGVRASYCTGAHS'
 RV_primer: 'AGGGTATCTAATCCT'
 marker_size_min: 440
