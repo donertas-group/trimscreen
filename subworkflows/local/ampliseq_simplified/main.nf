@@ -919,11 +919,22 @@ workflow AMPLISEQ_SIMPLIFIED {
             SBDIEXPORTREANNOTATE ( ch_dada2_tax, "dada2", db_version, params.cut_its, ch_barrnapsummary.ifEmpty([]) )
         }
         ch_versions = ch_versions.mix(SBDIEXPORT.out.versions.first())
-    }
+    }*/
 
     //
     // SUBWORKFLOW: Create phyloseq objects
     //
+    ch_tree_for_phyloseq = []
+    PHYLOSEQ_WORKFLOW (
+        ch_tax_for_phyloseq, 
+        ch_dada2_asv, 
+        ch_metadata.ifEmpty([]),
+        ch_tree_for_phyloseq,
+        false//replacing: run_qiime2
+    )
+    ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
+
+    /*
     if ( !params.skip_taxonomy ) {
         if ( params.pplace_tree ) {
             ch_tree_for_phyloseq = FASTA_NEWICK_EPANG_GAPPA.out.grafted_phylogeny
@@ -942,19 +953,9 @@ workflow AMPLISEQ_SIMPLIFIED {
     }*/
 
 
-/*  temporary commented out during moving compare_runs in parallel to ampliseq_simplified. Need to be added back.
-    ch_tree_for_phyloseq = []
-    PHYLOSEQ_WORKFLOW (
-        ch_tax_for_phyloseq, 
-        ch_best_tsv, 
-        ch_metadata.ifEmpty([]),
-        ch_tree_for_phyloseq,
-        false//replacing: run_qiime2
-    )
-    ch_versions = ch_versions.mix(PHYLOSEQ_WORKFLOW.out.versions.first())
 
 
-    //
+/*    //
     // SUBWORKFLOW: Create link to best runs in the best_run folder
     //
 
