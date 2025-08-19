@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import argparse
 import itertools
 import pandas as pd
@@ -32,7 +32,7 @@ def parse_args():
     # Required arguments (for mandatory algorithm)
     parser.add_argument("--marker_size_min", type=int, required=True,
                         help="Minimum marker size.")
-    parser.add_argument("--minimum_overlap", type=int, required=True,
+    parser.add_argument("--minimum_overlap", type=int, 
                         help="Minimum required overlap.")
     parser.add_argument("--step_size", type=int, required=True,
                         help="Step size for generating values.")
@@ -45,7 +45,7 @@ def parse_args():
     parser.add_argument("--outdir", "-o", type=str, required=True,
                         help="Output directory.")
 
-    # Optional arguments (for optional algorithm)
+    # Optional arguments 
     parser.add_argument("--trunclenf_range", "-f", type=str,
                         help="Format: 'min:step:max', 'value1,value2', or 'value'.")
     parser.add_argument("--trunclenr_range", "-r", type=str,
@@ -84,8 +84,8 @@ def run_mandatory_algorithm(args):
     f_len = args.FW_primer_len
     r_len = args.RV_primer_len
 
-    f_values = list((np.arange(min_val, max_val + 1, step) - f_len))
-    r_values = list((np.arange(min_val, max_val + 1, step) - r_len))
+    f_values = [x for x in (np.arange(min_val, max_val + 1, step) - f_len) if x > 0]
+    r_values = [x for x in (np.arange(min_val, max_val + 1, step) - r_len) if x > 0]
 
     valid_combinations = [
         (f, r) for f, r in itertools.product(f_values, r_values)
