@@ -32,7 +32,7 @@ Then prepare a metadata sheet that looks as follows:
 `metadata.csv`:
 
 ```csv
-ID,condition
+sampleID,condition
 S10A,sample
 S10B,sample
 C01,control
@@ -54,9 +54,6 @@ RV_primer: 'AGGGTATCTAATCCT'
 marker_size_min: 440
 step_size: 5
 
-trunclenf_range: 216:2:220
-trunclenr_range: 246:2:250
-
 publish_all_runs: false
 picrust: true
 ```
@@ -68,6 +65,12 @@ picrust: true
 Parameters required for setting trimming length screening:
 `marker_size_min`: minimum size of the expected marker amplicon. E.g. for 16s V4, expected marker size is 280 to 400 bp.
 `step_size`: Difference between two adjacent trimming lengths to be screened, can be set to 1 to 10.
+
+Parameters optional for refined screening. When this is set then extreme screening will be overwritten.
+```yaml
+trunclenf_range: 216:2:220
+trunclenr_range: 246:2:250
+```
 
 
 Now, you can run the pipeline using:

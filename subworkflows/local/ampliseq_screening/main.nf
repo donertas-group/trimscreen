@@ -16,7 +16,7 @@ workflow AMPLISEQ_SCREENING {
     ch_read_length = ch_samplesheet
             .first()
             .map { meta, readfw, readrv -> 
-                // Return the first FASTA file (readfw)
+                // Return the first FASTQ file (readfw)
                 return readfw
             }
             .splitFastq(record: true, limit: 1)
