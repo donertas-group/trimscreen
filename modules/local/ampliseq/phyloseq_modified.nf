@@ -22,7 +22,7 @@ process PHYLOSEQ {
     path "versions.yml",                                     emit: versions
 
     when:
-    task.ext.when == null || task.ext.when
+    meta.is_best_run == true
 
     script:
     def sam_csv = "\"${sam_csv}\""
