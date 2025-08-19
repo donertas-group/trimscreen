@@ -36,7 +36,7 @@ def main():
     df0 = pd.read_csv(filtered_table_csv)
     if metadata_csv is not None:
         metadata = pd.read_csv(metadata_csv)
-        sample_ids = metadata[metadata['condition'] == 'sample']['ID'].values
+        sample_ids = metadata[metadata['condition'] == 'sample']['sampleID'].values
         df = df0[df0['sample'].isin(sample_ids)]
     else:
         df = df0
