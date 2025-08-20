@@ -10,7 +10,7 @@ process PHYLOSEQ {
     publishDir "${params.outdir}/runs/${meta.runID}/phyloseq",
         mode: params.publish_dir_mode,
         pattern: "*.rds",
-        enabled: "${meta.is_best_run || params.publish_all_runs}"
+        enabled: "${meta.is_best_run}"
 
     input:
     tuple val(meta), val(prefix), path(tax_tsv), path(otu_tsv)
