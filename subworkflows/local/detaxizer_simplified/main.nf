@@ -9,7 +9,7 @@ include { paramsSummaryMap                                          } from 'plug
 include { paramsSummaryMultiqc                                      } from '../../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML                                    } from '../../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText                                    } from '../../../subworkflows/local/utils_nfcore_trimscreen_pipeline'
-//include { getGenomeAttribute                                        } from '../subworkflows/local/utils_nfcore_trimscreen_pipeline'
+include { getGenomeAttribute                                        } from '../../../subworkflows/local/utils_nfcore_trimscreen_pipeline/main.nf'
 include { GENERATE_DOWNSTREAM_SAMPLESHEETS                          } from '../../../subworkflows/local/generate_downstream_samplesheets/main.nf'// detaxizer has original subworkflow
 
 include { BBMAP_BBDUK                                               } from '../../../modules/nf-core/bbmap/bbduk/main'

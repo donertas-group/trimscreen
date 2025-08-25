@@ -13,7 +13,6 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-//include { TRIMSCREEN  } from './workflows/trimscreen'
 include { DETAXIZER_SIMPLIFIED  } from './subworkflows/local/detaxizer_simplified'
 include { TRIMSCREEN } from './workflows/trimscreen'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_trimscreen_pipeline'
@@ -37,26 +36,7 @@ include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_trim
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-//
-// WORKFLOW: Run main analysis pipeline depending on type of input
-//
-workflow DONERTASGROUP_TRIMSCREEN {
-
-    take:
-    samplesheet // channel: samplesheet read in from --input
-
-    main:
-
-    //
-    // WORKFLOW: Run pipeline
-    //
-    TRIMSCREEN (samplesheet)
-    
-    //emit:
-    //multiqc_report = TRIMSCREEN.out.multiqc_report // channel: /path/to/multiqc_report.html
-}
 /*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
@@ -79,7 +59,8 @@ workflow {
     //
     // WORKFLOW: Run main workflow
     //
-    DONERTASGROUP_TRIMSCREEN (
+    //DONERTASGROUP_TRIMSCREEN (
+    TRIMSCREEN (
         PIPELINE_INITIALISATION.out.samplesheet
     )
     //
