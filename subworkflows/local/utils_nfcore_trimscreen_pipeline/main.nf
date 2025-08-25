@@ -26,10 +26,10 @@ include { UTILS_NEXTFLOW_PIPELINE   } from '../../nf-core/utils_nextflow_pipelin
 workflow PIPELINE_INITIALISATION {
 
     take:
-    version           // boolean: Display version and exit
-    validate_params   // boolean: Boolean whether to validate parameters against the schema at runtime
-    monochrome_logs   // boolean: Do not use coloured log outputs
-    nextflow_cli_args //   array: List of positional nextflow CLI args
+    version           //  boolean: Display version and exit
+    validate_params   //  boolean: Boolean whether to validate parameters against the schema at runtime
+    monochrome_logs   //  boolean: Do not use coloured log outputs
+    nextflow_cli_args //  array: List of positional nextflow CLI args
     outdir            //  string: The output directory where the results will be saved
     input             //  string: Path to input samplesheet
 
@@ -155,10 +155,26 @@ workflow PIPELINE_COMPLETION {
 //
 def validateInputParameters() {
     genomeExistsError()
-
+//
     if (params.generate_downstream_samplesheets && !params.generate_pipeline_samplesheets) {
         error('[nf-core/detaxizer] If supplying `--generate_downstream_samplesheets`, you must also specify which pipeline to generate for with `--generate_pipeline_samplesheets! Check input.')
     }
+
+//
+    if( !params.skip_cutadapt ) {
+        if( !params.FW_primer || !params.RV_primer ) {
+            log.error "Missing required parameters, --skip_cutadapt is false, --FW_primer <string> and --RV_primer <string> must be provided."
+        }
+    } else {
+        if( params.FW_primer || params.RV_primer ) {
+            log.warn "--skip_cutadapt is true, parameters --FW_primer and --RV_primer will be ignored."
+            
+        }
+    }
+
+//
+
+
 }
 
 //
