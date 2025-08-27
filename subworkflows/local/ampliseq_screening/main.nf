@@ -43,9 +43,69 @@ workflow AMPLISEQ_SCREENING {
            def is_best_run = false // initiallise is_best_run to false
            return tuple(row.runID, row.trunclenf, row.trunclenr, is_best_run) } 
 
+    //
+    // Subset samples //
+    //
+
+    // pull out the is_best_run flag from params
+    ch_is_best_run = ch_params.map { runID, trunclenf, trunclenr, is_best_run ->
+        is_best_run
+    }.unique()
+
+    subset_samples = params.subset_samples ?: false
+
+
+    // Conditionally subset the input reads
+    ch_samplesheet_subset = ch_samplesheet.collect()
+        .combine (ch_is_best_run)
+        .map { tuple ->
+            def is_best_run = tuple[-1]
+            def all_samples = tuple[0..-2].collate(3)
+            if (subset_samples && !is_best_run) {
+                if (subset_samples < all_samples.size()) {
+                    log.info "Randomly selecting ${subset_samples} samples out of ${all_samples.size()} for screening"
+                    return all_samples.shuffled().take(subset_samples)
+                } else {
+                    log.info "Requested ${subset_samples} samples but only ${all_samples.size()} available - using all samples for screening"
+                    return all_samples
+                }
+            } else {
+                log.info "Using all ${all_samples.size()} samples for screening"
+                return all_samples
+            }
+        }
+        .flatMap { it }
+
+    // Check the size of the cartesian product before running the workflow
+    ch_samplesheet_subset
+        .combine(ch_params)
+        .count()
+        .subscribe { count ->
+            if (count > 10000) {
+                log.warn """
+        ================================================================================
+        WARNING: Too many runs detected!
+        ================================================================================
+        The cartesian product of samples and parameters results in ${count} runs.
+        This can take a long time to finish, or take too much computing resources.
+        
+        Recommendations:
+        - Consider subsetting your samples further with `--subset_samples`
+        - Reduce the screening step size by 
+          1. increasing `--step_size`; or
+          2. adjusting `--trunclenf_range` and/or `--trunclenr_range`
+        ================================================================================
+                """
+            } else {
+                log.info "Number of runs: ${count}"
+            }
+        }
+
+
+
 
     // Run simplified version of ampliseq
-    AMPLISEQ_SIMPLIFIED(ch_samplesheet, ch_params)
+    AMPLISEQ_SIMPLIFIED(ch_samplesheet_subset, ch_params)
 
 
 

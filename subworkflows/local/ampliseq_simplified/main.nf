@@ -294,36 +294,6 @@ workflow AMPLISEQ_SIMPLIFIED {
             return [meta, [readfw, readrv]]
         }
 
-    // pull out the is_best_run flag from params
-    ch_is_best_run = ch_params.map { runID, trunclenf, trunclenr, is_best_run ->
-        is_best_run
-    }.unique()
-
-    subset_samples = params.subset_samples ?: false
-
-
-    // Conditionally subset the input reads
-    ch_input_reads = ch_input_reads.collect()
-        .combine (ch_is_best_run)
-        .map { tuple ->
-            def is_best_run = tuple[-1]
-            def all_reads = tuple[0..-2].collate(2)
-            if (subset_samples && !is_best_run) {
-                if (subset_samples < all_reads.size()) {
-                    log.info "Randomly selecting ${subset_samples} samples out of ${all_reads.size()} for screening"
-                    return all_reads.shuffled().take(subset_samples)
-                } else {
-                    log.info "Requested ${subset_samples} samples but only ${all_reads.size()} available - using all samples for screening"
-                    return all_reads
-                }
-            } else {
-                log.info "Using all samples for screening"
-                return all_reads
-            }
-        }
-        .flatMap { it }
-
-
  // long_read option in detaxizer is disabled from here
 /*        
         def reads = single_end ? readfw : [readfw,readrv]
@@ -394,6 +364,9 @@ workflow AMPLISEQ_SIMPLIFIED {
         def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr, is_best_run: is_best_run]  
         tuple(new_meta, reads)}
         .set{ ch_renamed_w_params }
+
+
+
 
     if (!params.skip_cutadapt) {
         CUTADAPT_WORKFLOW (
