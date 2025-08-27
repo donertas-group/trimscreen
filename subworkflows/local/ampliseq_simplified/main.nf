@@ -126,7 +126,6 @@ tax_agglom_min = params.tax_agglom_min
 tax_agglom_max = params.tax_agglom_max
 
 */
-
 // Set non-params Variables
 single_end = false
 
@@ -244,8 +243,6 @@ include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/local/ampl
 include { DADA2_PREPROCESSING           } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
 include { DADA2_TAXONOMY_WF             } from '../../../subworkflows/local/ampliseq/dada2_taxonomy_wf'
 include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/local/ampliseq/phyloseq_workflow_modified'
-//include { COMPARE_RUNS                  } from '../../../subworkflows/local/compare_runs/main'
-//include { CREATE_LINK                   } from '../../../modules/local/create_link'
 
 /*
 include { QIIME2_PREPTAX                } from '../../../subworkflows/ampliseq/qiime2_preptax'
@@ -290,11 +287,41 @@ workflow AMPLISEQ_SIMPLIFIED {
     ch_multiqc_files = Channel.empty()
     ch_input_fasta = Channel.empty()
 
+
     ch_input_reads = ch_samplesheet
         .map{ meta, readfw, readrv -> 
             meta.single_end = single_end.toBoolean()
             return [meta, [readfw, readrv]]
-        } // long_read option in detaxizer is disabled from here
+        }
+
+    // pull out the is_best_run flag from params
+    ch_is_best_run = ch_params.map { runID, trunclenf, trunclenr, is_best_run ->
+        is_best_run
+    }.unique()
+
+    subset_samples = params.subset_samples ?: false
+
+
+    // Conditionally subset the input reads
+    ch_input_reads = ch_input_reads.collect()
+        .combine (ch_is_best_run)
+        .map { tuple ->
+            def is_best_run = tuple[-1]
+            def all_reads = tuple[0..-2].collate(2)
+            if (subset_samples && !is_best_run) {
+                if (subset_samples < all_reads.size()) {
+                    log.info "Randomly selecting ${subset_samples} samples out of ${all_reads.size()}"
+                    return all_reads.shuffled().take(subset_samples)
+                } else {
+                    log.info "Requested ${subset_samples} samples but only ${all_reads.size()} available - using all samples"
+                    return all_reads
+                }
+            }
+        }
+        .flatMap { it }
+
+
+ // long_read option in detaxizer is disabled from here
 /*        
         def reads = single_end ? readfw : [readfw,readrv]
         if ( !meta.single_end && !readrv ) { error("Entry `reverseReads` is missing in $params.input for $meta.sample, either correct the samplesheet or use `--single_end`, `--pacbio`, or `--iontorrent`") } // make sure that reverse reads are present when single_end isn't specified
