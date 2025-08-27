@@ -14,7 +14,7 @@ def get_step(df):
     diffs = [abs(a - b) for a, b in combinations(lenf, 2)]
 
     # Return the minimum difference
-    return min(diffs) if diffs else 5
+    return min(diffs) if diffs else 3
 
 
 def parse_args(args=None):
@@ -42,7 +42,7 @@ def main():
         df = df0
 
     step = get_step(df)
-    N = math.ceil(5 / step)
+    N = math.ceil(3 / step)
 
     def get_best_runs_by_sort_order(df, primary_tax, secondary_tax, N):
         best_runs = {}
