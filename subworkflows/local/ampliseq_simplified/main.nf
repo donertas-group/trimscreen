@@ -310,12 +310,15 @@ workflow AMPLISEQ_SIMPLIFIED {
             def all_reads = tuple[0..-2].collate(2)
             if (subset_samples && !is_best_run) {
                 if (subset_samples < all_reads.size()) {
-                    log.info "Randomly selecting ${subset_samples} samples out of ${all_reads.size()}"
+                    log.info "Randomly selecting ${subset_samples} samples out of ${all_reads.size()} for screening"
                     return all_reads.shuffled().take(subset_samples)
                 } else {
-                    log.info "Requested ${subset_samples} samples but only ${all_reads.size()} available - using all samples"
+                    log.info "Requested ${subset_samples} samples but only ${all_reads.size()} available - using all samples for screening"
                     return all_reads
                 }
+            } else {
+                log.info "Using all samples for screening"
+                return all_reads
             }
         }
         .flatMap { it }
