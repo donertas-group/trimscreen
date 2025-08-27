@@ -13,12 +13,12 @@ import numpy as np
 
 #Mandatory algorithm (default):
 
-#python script.py --marker_size_min 250 --minimum_overlap 20 --step 10 \
+#python script.py --marker_size_min 250 --minimum_overlap 20 --step_size 10 \
 #--read_length 300 --FW_primer_len 17 --RV_primer_len 21 -o results/
 
 #Optional algorithm (when both -f and -r are provided):
 
-#python script.py --marker_size_min 250 --minimum_overlap 20 --step 10 \
+#python script.py --marker_size_min 250 --minimum_overlap 20 --step_size 10 \
 #--read_length 300 --FW_primer_len 17 --RV_primer_len 21 \
 #-f 100:10:200 -r 100,150,200 -o results/
 
@@ -77,8 +77,8 @@ def run_optional_algorithm(trunclenf_range, trunclenr_range, outdir):
     pd.DataFrame(run_data).to_csv(output_path, index=False)
 
 def run_mandatory_algorithm(args):
-    total_min = args.marker_size_min + args.minimum_overlap
-    min_val = 50
+    total_min = args.marker_size_min + args.minimum_overlap - 10 # allow 10bp buffer for min_marker_size
+    min_val = 50 # consistent with dada2
     max_val = args.read_length
     step = args.step_size
     f_len = args.FW_primer_len
