@@ -13,6 +13,9 @@ workflow AMPLISEQ_SCREENING {
     FW_primer_len = params.FW_primer ? params.FW_primer.size() : 0
     RV_primer_len = params.RV_primer ? params.RV_primer.size() : 0
 
+    trunclenf_range = params.trunclenf_range ?: ""
+    trunclenr_range = params.trunclenr_range ?: ""
+
     ch_read_length = ch_samplesheet
             .first()
             .map { meta, readfw, readrv -> 
@@ -23,11 +26,9 @@ workflow AMPLISEQ_SCREENING {
             .map { record -> record.readString.length() }
         
     // Report extracted read length:
-    ch_read_length.view { "Read length extracted from samplesheet: $it" }
-
-
-    trunclenf_range = params.trunclenf_range ?: ""
-    trunclenr_range = params.trunclenr_range ?: ""
+    ch_read_length.subscribe { read_len ->
+        log.info "Read length extracted from samplesheet: ${read_len}"
+    }
 
     GENERATE_PARAMS (
         params.marker_size_min, 
