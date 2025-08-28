@@ -25,6 +25,10 @@ workflow AMPLISEQ_SCREENING {
     // Report extracted read length:
     ch_read_length.view { "Read length extracted from samplesheet: $it" }
 
+
+    trunclenf_range = params.trunclenf_range ?: ""
+    trunclenr_range = params.trunclenr_range ?: ""
+
     GENERATE_PARAMS (
         params.marker_size_min, 
         params.minimum_overlap, 
@@ -32,8 +36,8 @@ workflow AMPLISEQ_SCREENING {
         ch_read_length,
         FW_primer_len,
         RV_primer_len,
-        params.trunclenf_range,
-        params.trunclenr_range 
+        trunclenf_range,
+        trunclenr_range 
     )
 
     // Create a channel with parameters as input to ampliseq (simplified from nf-core)
