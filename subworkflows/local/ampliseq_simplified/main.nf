@@ -325,7 +325,9 @@ workflow AMPLISEQ_SIMPLIFIED {
             passed: true
         }
         .set { ch_reads_result }
+
     ch_reads_result.passed.set { ch_reads }
+
     ch_reads_result.failed
         .map { meta, reads -> [ meta.id ] }
         .collect()
@@ -337,6 +339,7 @@ workflow AMPLISEQ_SIMPLIFIED {
                 error("At least one input file for the following sample(s) had too few reads (<$params.min_read_counts):\n$samples\nEither remove those samples, adjust the threshold with `--min_read_counts`, or ignore that samples using `--ignore_empty_input_files`.")
             }
         }
+
     ch_reads.dump(tag: 'ch_reads')
 
     //
@@ -364,8 +367,6 @@ workflow AMPLISEQ_SIMPLIFIED {
         def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr, is_best_run: is_best_run]  
         tuple(new_meta, reads)}
         .set{ ch_renamed_w_params }
-
-
 
 
     if (!params.skip_cutadapt) {
@@ -399,35 +400,72 @@ workflow AMPLISEQ_SIMPLIFIED {
     // MODULES: ASV generation with DADA2
     //
     //run error model
-    if ( true ){//!params.illumina_novaseq ) {
-        DADA2_ERR ( ch_filt_reads )
-        ch_errormodel = DADA2_ERR.out.errormodel
-        ch_versions = ch_versions.mix(DADA2_ERR.out.versions)
-    } else {
-        DADA2_ERR ( ch_filt_reads )
-        NOVASEQ_ERR ( DADA2_ERR.out.errormodel )
-        ch_errormodel = NOVASEQ_ERR.out.errormodel
-        ch_versions = ch_versions.mix(DADA2_ERR.out.versions)
-    }
+    DADA2_ERR ( ch_filt_reads )
+    ch_errormodel = DADA2_ERR.out.errormodel
+    ch_versions = ch_versions.mix(DADA2_ERR.out.versions)
 
     //group by meta
     ch_filt_reads
         .join( ch_errormodel )
         .set { ch_derep_errormodel }
+
     DADA2_DENOISING ( ch_derep_errormodel.dump(tag: 'into_denoising')  )
     ch_versions = ch_versions.mix(DADA2_DENOISING.out.versions)
 
-    DADA2_RMCHIMERA ( DADA2_DENOISING.out.seqtab )
-    ch_versions = ch_versions.mix(DADA2_RMCHIMERA.out.versions)
+    DADA2_DENOISING.out.seqtab
+        .branch {meta, rds ->
+            def cmd = ["Rscript", "-e", 
+                "obj <- readRDS('${rds}'); cat(if(length(obj) == 0) 'empty' else 'passed')"
+            ]
+            def result = cmd.execute().text.trim()
+            passed: result == "passed"
+                return [meta, rds]
+            failed: result == "empty"
+                return [meta, rds]
+        }
+        .set { ch_denoised_seqtab }
 
+    ch_denoised_seqtab.failed
+        .map { meta, rds -> [ meta.id ] }
+        .collect()
+        .subscribe {
+            samples = it.join("\n")
+            log.warn "$samples yield(s) empty output files and will be ignored. \n"
+        }
+    
+    DADA2_DENOISING.out.denoised
+    .join(DADA2_DENOISING.out.seqtab)
+    .join(DADA2_DENOISING.out.mergers)
+    .branch {  meta, denoised, seqtab, mergers ->
+            def cmd = ["Rscript", "-e", 
+                "obj <- readRDS('${seqtab}'); cat(if(length(obj) == 0) 'empty' else 'passed')"
+            ]
+            def result = cmd.execute().text.trim() 
+            passed: result == "passed"
+                return [meta, denoised, seqtab, mergers]
+            failed: result == "empty"
+                return [meta, denoised, seqtab, mergers]
+    }
+    .set { ch_dada2_denoising }
+ 
 
+ //   DADA2_RMCHIMERA ( DADA2_DENOISING.out.seqtab )
 
     //group by sequencing run & group by meta
+    DADA2_RMCHIMERA ( ch_denoised_seqtab.passed )
     DADA2_PREPROCESSING.out.logs
         .join( DADA2_DENOISING.out.denoised )
         .join( DADA2_DENOISING.out.mergers )
         .join( DADA2_RMCHIMERA.out.rds )
         .set { ch_track_numbers }
+/*
+    DADA2_RMCHIMERA ( ch_dada2_denoising.passed.map{ meta, denoised, seqtab, mergers -> [meta, seqtab] } )
+    DADA2_PREPROCESSING.out.logs
+            .join( ch_dada2_denoising.passed.map{meta, denoised, seqtab, mergers -> [ meta, denoised, mergers ]} )
+            .join( DADA2_RMCHIMERA.out.rds )
+            .set { ch_track_numbers }
+*/
+    ch_versions = ch_versions.mix(DADA2_RMCHIMERA.out.versions)
     DADA2_STATS ( ch_track_numbers )
     ch_versions = ch_versions.mix(DADA2_STATS.out.versions)
 
@@ -583,44 +621,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         }
     
 }
-/*
-    //
-    // Modules : Filtering based on codons in an open reading frame
-    //
-    if ( params.filter_codons && !params.multiregion ) {
-        FILTER_CODONS ( ch_dada2_fasta, ch_dada2_asv.ifEmpty( [] ) )
-        ch_versions = ch_versions.mix(FILTER_CODONS.out.versions)
-        MERGE_STATS_CODONS( ch_stats, FILTER_CODONS.out.stats )
-        ch_versions = ch_versions.mix(MERGE_STATS_CODONS.out.versions)
-        ch_stats = MERGE_STATS_CODONS.out.tsv
-        ch_dada2_fasta = FILTER_CODONS.out.fasta
-        ch_dada2_asv = FILTER_CODONS.out.asv
-        // Make sure that not all sequences were removed
-        ch_dada2_fasta.subscribe { if (it.countLines() == 0) error("ASV codon filtering activated by '--filter_codons' removed all ASVs, please adjust settings.") }
-    }
 
-    //
-    // Modules : ITSx - cut out ITS region if long ITS reads
-    //
-    ch_full_fasta = ch_dada2_fasta
-    if (params.cut_its == "none") {
-        ch_fasta = ch_dada2_fasta
-    } else {
-        if (params.cut_its == "full") {
-            outfile = params.its_partial ? "ASV_ITS_seqs.full_and_partial.fasta" : "ASV_ITS_seqs.full.fasta"
-        }
-        else if (params.cut_its == "its1") {
-            outfile =  params.its_partial ? "ASV_ITS_seqs.ITS1.full_and_partial.fasta" : "ASV_ITS_seqs.ITS1.fasta"
-        }
-        else if (params.cut_its == "its2") {
-            outfile =  params.its_partial ? "ASV_ITS_seqs.ITS2.full_and_partial.fasta" : "ASV_ITS_seqs.ITS2.fasta"
-        }
-        ITSX_CUTASV ( ch_full_fasta, outfile )
-        ch_versions = ch_versions.mix(ITSX_CUTASV.out.versions)
-        FILTER_LEN_ITSX ( ITSX_CUTASV.out.fasta, [] )
-        ch_fasta = FILTER_LEN_ITSX.out.fasta
-    }
-*/
         ch_full_fasta = ch_dada2_fasta    
         ch_fasta = ch_dada2_fasta
 
