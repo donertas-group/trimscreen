@@ -41,26 +41,19 @@ workflow AMPLISEQ_SCREENING {
         trunclenr_range 
     )
 
-    // Create a channel with parameters as input to ampliseq (simplified from nf-core)
     ch_params = GENERATE_PARAMS.out.params_csv
     .splitCsv(header: true, sep: ',')
     .map { row -> 
            def is_best_run = false // initiallise is_best_run to false
            return tuple(row.runID, row.trunclenf, row.trunclenr, is_best_run) } 
 
-    //
-    // Subset samples //
-    //
-
-    // pull out the is_best_run flag from params
+    // Subset samples 
     ch_is_best_run = ch_params.map { runID, trunclenf, trunclenr, is_best_run ->
         is_best_run
     }.unique()
 
     subset_samples = params.subset_samples ?: false
 
-
-    // Conditionally subset the input reads
     ch_samplesheet_subset = ch_samplesheet.collect()
         .combine (ch_is_best_run)
         .map { tuple ->
@@ -81,7 +74,7 @@ workflow AMPLISEQ_SCREENING {
         }
         .flatMap { it }
 
-    // Check the size of the cartesian product before running the workflow
+    // Check the number of individual runs before running the workflow
     ch_samplesheet_subset
         .combine(ch_params)
         .count()
@@ -89,15 +82,15 @@ workflow AMPLISEQ_SCREENING {
             if (count > 10000) {
                 log.warn """
         ================================================================================
-        WARNING: Too many runs detected!
+        WARNING: Too many runs 
         ================================================================================
-        The cartesian product of samples and parameters results in ${count} runs.
+        Sample numbers and parameter settings result in ${count} runs.
         This can take a long time to finish, or take too much computing resources.
         
         Recommendations:
         - Consider subsetting your samples further with `--subset_samples`
-        - Reduce the screening step size by 
-          1. increasing `--step_size`; or
+        - Reduce the number of parameters to be screened by 
+          1. increasing `--step_size` or
           2. adjusting `--trunclenf_range` and/or `--trunclenr_range`
         ================================================================================
                 """
@@ -105,8 +98,6 @@ workflow AMPLISEQ_SCREENING {
                 log.info "Number of runs: ${count}"
             }
         }
-
-
 
 
     // Run simplified version of ampliseq
@@ -154,16 +145,24 @@ workflow AMPLISEQ_SCREENING {
 
 
 
-    if (!params.publish_all_runs) {
+
+    if (!params.subset_samples && params.publish_all_runs) { 
+
+        // Create links to best runs
+        ch_best_tsv.collect().map { it[0] }
+            .set { ch_best_for_link }
+        CREATE_LINK ( ch_best_for_link )
+
+
+    } else {
+
         // Create updated metadata channel with is_best_run = true for best runs
-        ch_best_run_formatted = ch_best_run
+        ch_best_run_annotated = ch_best_run
         .map { runID -> [runID, true] }        
 
         ch_params_best = ch_params
             .map {runID, trunclenf, trunclenr, is_best_run -> [runID, trunclenf, trunclenr] }
-            .join( ch_best_run_formatted)
-
-        ch_params_best.view()
+            .join( ch_best_run_annotated )
 
         // Re-run AMPLISEQ_SIMPLIFIED with updated metadata (will use cached results but publish properly)
         AMPLISEQ_SIMPLIFIED_RERUN(ch_samplesheet, ch_params_best)
@@ -172,17 +171,17 @@ workflow AMPLISEQ_SCREENING {
         ch_best_tsv = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_table
         ch_best_fasta = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_fasta
     
+
     }
 
-    // Create links to best runs
-    ch_best_tsv.collect().map { it[0] }
-        .set { ch_best_for_link }
-    CREATE_LINK ( ch_best_for_link )
 
 
 
-    /*emit:
-    runs_summary     = AMPLISEQ_SIMPLIFIED.out.runs_summary
+
+
+    emit:
+    best_run         = ch_best_run
+    /*runs_summary     = AMPLISEQ_SIMPLIFIED.out.runs_summary
     runs_asv_table   = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
     runs_asv_tax     = AMPLISEQ_SIMPLIFIED.out.runs_asv_tax
     best_asv_table   = ch_best_tsv
