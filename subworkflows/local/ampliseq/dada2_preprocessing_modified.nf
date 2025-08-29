@@ -106,33 +106,13 @@ workflow DADA2_PREPROCESSING {
         .subscribe {
             samples = it.join("\n")
             if (params.ignore_failed_filtering) {
-                log.warn "The following samples had too few reads (<$params.min_read_counts) after quality filtering with DADA2:\n$samples\nRuns containing failed samples are removed and continue!\n"
+                log.warn "The following samples had too few reads (<$params.min_read_counts) after quality filtering with DADA2:\n$samples\nRuns containing failed samples are removed and continue.\n"
             } else {
                 error("The following samples had too few reads (<$params.min_read_counts) after quality filtering with DADA2:\n$samples\nPlease check settings related to quality filtering such as `--max_ee` (increase), `--trunc_qmin` (increase) or `--trunclenf`/`--trunclenr` (decrease). Ignore that samples using `--ignore_failed_filtering` or adjust the threshold with `--min_read_counts`.")
             }
         }
-/*
-    ch_dada2_filtntrim_results.success
-        .map { [ it[0].run, it ] }         // -> [runID, [meta, reads, logs, args]]
-        .groupTuple()        
-        //.collect()
-        //.view { "groups: $it" }
-        //.view { groups -> "groups: " + groups.collect { pair -> "${pair[0]} -> ${pair[1].size()}" }.join(', ') }
-        .map { run, group ->
-            //def maxSize = group.max{ it.size() }.size()
-            def maxSize = group.size().collect{ it }.max()
-            println("max size ${maxSize}")
-            group
-                .findAll { it.size() == maxSize }  // keep all with max size
-                .collectMany { it }                // flatten one level
-        }
-        .view { "filtered group: $it" }
-        .flatMap { it }
-        .collate(4)
-        .set { ch_dada2_filtntrim_results_passed } 
-*/
 
-    ch_dada2_filtntrim_results.success
+/*    ch_dada2_filtntrim_results.success
         .map { [ it[0].run, it ] }         // -> [runID, [meta, reads, logs, args]]
         .groupTuple()
         .map { run, group -> [group.size(), group] }
@@ -141,28 +121,9 @@ workflow DADA2_PREPROCESSING {
         .flatMap {it[1]}
         .flatMap {it}
         .set { ch_dada2_filtntrim_results_passed }       
- 
-//    ch_dada2_filtntrim_results_passed = ch_dada2_filtntrim_results.passed 
-
-
-/*
-    ch_dada2_filtntrim_results.success
-        .map { [ it[0].run, it ] }         // -> [runID, [meta, reads, logs, args]]
-        .groupTuple()
-        .map { run, group -> [group.size(), run, group] }
-        .toList()
-        .map { groups ->
-            def maxSize = groups.max { it[0] }[0]
-            println("max size $maxSize")
-            groups.findAll { it[0] == maxSize }
-                  .collect { it[2] }
-        }
-        .flatMap()
-        .set { ch_dada2_filtntrim_results_passed }
-
-*/
-
-
+*/  
+ //  ch_dada2_filtntrim_results_passed.view()
+    ch_dada2_filtntrim_results_passed = ch_dada2_filtntrim_results.success
 
 
     // Break apart the reads and logs so that only the samples
