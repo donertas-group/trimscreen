@@ -6,6 +6,7 @@
 include { samplesheetToList                                         } from 'plugin/nf-schema'
 include { DETAXIZER_SIMPLIFIED                                      } from '../subworkflows/local/detaxizer_simplified/main.nf'
 include { AMPLISEQ_SCREENING                                        } from '../subworkflows/local/ampliseq_screening/main.nf'
+include { WRITE_AMPLISEQ_COMMAND                                    } from '../modules/local/write_ampliseq_command'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,6 +39,7 @@ workflow TRIMSCREEN {
 
         AMPLISEQ_SCREENING (ch_new_samplesheet)
 
+
        // multiqc_report = AMPLISEQ_SCREENING.out.multiqc_report
 
     } else {
@@ -47,7 +49,8 @@ workflow TRIMSCREEN {
         //multiqc_report = AMPLISEQ_SCREENING.out.multiqc_report
     }
     
-
+    best_run = AMPLISEQ_SCREENING.out.best_run
+    WRITE_AMPLISEQ_COMMAND(best_run)
     //emit:
     //multiqc_report
 }
