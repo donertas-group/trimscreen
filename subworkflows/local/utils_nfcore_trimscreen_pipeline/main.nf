@@ -168,11 +168,18 @@ def validateInputParameters() {
     } else {
         if( params.FW_primer || params.RV_primer ) {
             log.warn "--skip_cutadapt is true, parameters --FW_primer and --RV_primer will be ignored."
-            
         }
     }
 
 //
+    if ( !params.input ) {
+        error("Missing input declaration: `--input` is required.")
+    }
+
+//
+    if ( params.min_len_asv && params.max_len_asv && (params.min_len_asv > params.max_len_asv) ) {
+        error("Incompatible parameters: `--min_len_asv` may not be greater than `--max_len_asv`.")
+    }
 
 
 }
