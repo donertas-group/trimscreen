@@ -7,7 +7,7 @@ process PHYLOSEQ {
         'https://depot.galaxyproject.org/singularity/bioconductor-phyloseq:1.46.0--r43hdfd78af_0' :
         'biocontainers/bioconductor-phyloseq:1.46.0--r43hdfd78af_0' }"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/phyloseq",
+    publishDir "${params.outdir}/best_run/${meta.runID}/phyloseq",
         mode: params.publish_dir_mode,
         pattern: "*.rds",
         enabled: "${meta.is_best_run}"

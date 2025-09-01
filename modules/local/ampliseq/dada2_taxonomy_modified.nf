@@ -11,12 +11,22 @@ process DADA2_TAXONOMY {
     publishDir "${params.outdir}/runs/${meta.runID}/dada2/args",
         mode: params.publish_dir_mode,
         pattern: "*.args.txt",
-        enabled: "${meta.is_best_run || params.publish_all_runs}"
+        enabled: params.publish_all_runs
 
     publishDir "${params.outdir}/runs/${meta.runID}/dada2",
         mode: params.publish_dir_mode,
         pattern: "*.tsv",
-        enabled: "${meta.is_best_run || params.publish_all_runs}"
+        enabled: params.publish_all_runs
+
+    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/args",
+        mode: params.publish_dir_mode,
+        pattern: "*.args.txt",
+        enabled: "${meta.is_best_run}"
+
+    publishDir "${params.outdir}/best_run/${meta.runID}/dada2",
+        mode: params.publish_dir_mode,
+        pattern: "*.tsv",
+        enabled: "${meta.is_best_run}"
 
     input:
     tuple val(meta), path(fasta)

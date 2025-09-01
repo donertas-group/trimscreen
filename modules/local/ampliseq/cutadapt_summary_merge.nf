@@ -10,7 +10,12 @@ process CUTADAPT_SUMMARY_MERGE {
     publishDir "${params.outdir}/runs/${meta.runID}/cutadapt",
         mode: params.publish_dir_mode,
         saveAs: { filename -> filename == 'versions.yml' ? null : filename },
-        enabled: "${meta.is_best_run || params.publish_all_runs}"
+        enabled: params.publish_all_runs
+
+    publishDir "${params.outdir}/best_run/${meta.runID}/cutadapt",
+        mode: params.publish_dir_mode,
+        saveAs: { filename -> filename == 'versions.yml' ? null : filename },
+        enabled: "${meta.is_best_run}"
 
     input:
     val(action)

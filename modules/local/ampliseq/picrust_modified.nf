@@ -7,7 +7,7 @@ process PICRUST {
         'https://depot.galaxyproject.org/singularity/picrust2:2.5.3--pyhdfd78af_0' :
         'biocontainers/picrust2:2.5.3--pyhdfd78af_0' }"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/picrust",
+    publishDir "${params.outdir}/best_run/${meta.runID}/picrust",
         mode: params.publish_dir_mode,
         saveAs: { filename -> filename == 'versions.yml' ? null : filename },
         enabled: "${meta.is_best_run}"
