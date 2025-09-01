@@ -70,7 +70,7 @@ def run_optional_algorithm(trunclenf_range, trunclenr_range, outdir):
     f_values = parse_range(trunclenf_range)
     r_values = parse_range(trunclenr_range)
     combinations = list(itertools.product(f_values, r_values))
-    run_data = [{"runID": f"run_{f}{r}", "trunclenf": f, "trunclenr": r} for f, r in combinations]
+    run_data = [{"runID": f"run_{f:03d}{r:03d}", "trunclenf": f, "trunclenr": r} for f, r in combinations]
 
     os.makedirs(outdir, exist_ok=True)
     output_path = os.path.join(outdir, "summary_params_settings.csv")
