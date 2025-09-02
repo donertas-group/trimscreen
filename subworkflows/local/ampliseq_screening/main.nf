@@ -33,7 +33,7 @@ workflow AMPLISEQ_SCREENING {
     GENERATE_PARAMS (
         params.marker_size_min, 
         params.minimum_overlap, 
-        params.step_size, 
+        params.screen_interval, 
         ch_read_length,
         FW_primer_len,
         RV_primer_len,
@@ -90,7 +90,7 @@ workflow AMPLISEQ_SCREENING {
         Recommendations:
         - Consider subsetting your samples further with `--subset_samples`
         - Reduce the number of parameters to be screened by 
-          1. increasing `--step_size` or
+          1. increasing `--screen_interval` or
           2. adjusting `--trunclenf_range` and/or `--trunclenr_range`
         ================================================================================
                 """

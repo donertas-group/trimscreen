@@ -356,10 +356,10 @@
                     "type": "integer",
                     "default": 50,
                     "description": "Minimum overlap for paired-end reads merging."},
-                "step_size": {
+                "screen_interval": {
                     "type": "integer",
                     "default": 10,
-                    "description": "Step size for truncation length screening."},
+                    "description": "Fixed difference between two consecutive values of a trimming parameter."},
                 "read_length": {
                     "type": "integer",
                     "default": 250,
