@@ -77,7 +77,7 @@ def run_optional_algorithm(trunclenf_range, trunclenr_range, outdir):
     pd.DataFrame(run_data).to_csv(output_path, index=False)
 
 def run_mandatory_algorithm(args):
-    total_min = args.marker_size_min + args.minimum_overlap - 10 # allow 10bp buffer for min_marker_size
+    total_min = args.marker_size_min + args.minimum_overlap + 10 # allow 10bp buffer for min_marker_size
     min_val = 50 # consistent with dada2
     max_val = args.read_length
     interval = args.screen_interval
