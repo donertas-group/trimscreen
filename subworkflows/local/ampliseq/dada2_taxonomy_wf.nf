@@ -60,7 +60,7 @@ workflow DADA2_TAXONOMY_WF {
     DADA2_TAXONOMY ( 
         ch_fasta, 
         ch_assigntax, 
-        ASV_tax_name + ".${val_dada_ref_taxonomy}.tsv", 
+        ASV_tax_name + ".${val_dada_ref_taxonomy}.tsv.gz", 
         taxlevels )
 
     ch_versions_dada_taxonomy = ch_versions_dada_taxonomy.mix(DADA2_TAXONOMY.out.versions)
