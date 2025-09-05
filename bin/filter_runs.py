@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import sys
 import argparse
+import json
 
 def parse_args(args=None):
 
@@ -89,74 +90,6 @@ def filter_runs(df, columns):
     return filtered_df
 
 
-
-def filter_runs_bad(df, columns):
-    # Convert specified columns to numeric
-    df[columns] = df[columns].apply(pd.to_numeric, errors='coerce')
-
-    results = {}
-
-    for column in columns:
-        # Compute global mean and std across all runs
-        col_mean = df[column].mean()
-        col_std = df[column].std()
-
-        # Define 2-sigma bounds
-        lower, upper = col_mean - 1 * col_std, col_mean + 1 * col_std
-
-        # Keep runs within 2-sigma bounds for this column
-        filtered = df[(df[column] >= lower) & (df[column] <= upper)]
-        results[column] = set(filtered['run'].values)
-
-    # Take the intersection of runs that passed all column filters
-    common_runs = set.intersection(*results.values())
-
-    # Return only the filtered rows
-    filtered_df = df[df['run'].isin(common_runs)]
-
-    return filtered_df
-
-def filter_runs_old(df, columns):
-    # Initialize an empty dictionary to store the results
-    results = {}
-
-    # Loop through each column provided
-    for column in columns:
-
-        # covert to numeric
-        df[columns] = df[columns].apply(pd.to_numeric, errors='coerce')
-        # Group by 'run' and calculate median and standard deviation
-        grouped = df.groupby('run')[column].agg(['median', 'std']).reset_index()
-
-        # Compute global 2-sigma range for median
-        median_mean = grouped['median'].mean()
-        median_std = grouped['median'].std()
-        median_lower, median_upper = median_mean - 2 * median_std, median_mean + 2 * median_std
-
-        # Compute global 2-sigma range for standard deviation
-        std_mean = grouped['std'].mean()
-        std_std = grouped['std'].std()
-        std_lower, std_upper = std_mean - 2 * std_std, std_mean + 2 * std_std
-
-        # Filter runs whose median and std fall within their respective 3-sigma range
-        filtered_grouped = grouped[
-            (grouped['median'] >= median_lower) & (grouped['median'] <= median_upper) &
-            (grouped['std'] >= std_lower) & (grouped['std'] <= std_upper)
-        ]
-
-        # Store the filtered runs in the dictionary
-        results[column] = set(filtered_grouped['run'].values)
-
-    # Find the intersection of all top runs across columns
-    common_runs = set.intersection(*results.values())
-
-    # Filter the dataframe to keep only the rows corresponding to the common 'run's
-    filtered_df = df[df['run'].isin(common_runs)]
-
-    return filtered_df
-
-
-
 def main():
     args = parse_args()
 
@@ -168,13 +101,17 @@ def main():
     # filter runs by evaluating the median and sd of choosen columns
     filtered_table = filter_runs(full_table, columns_to_filter)
 
+
+    # get rarefaction depth
+    D = filtered_table['DADA2_input'].min()
+
+    # output as [runID, depth] as stdout for nf process
+    out = [[run, int(D)] for run in filtered_table['run'].tolist()]
+    print(json.dumps(out))
+    
     filtered_table.to_csv("filtered_table.csv", index=False)
 
 
 if __name__ == "__main__":
     sys.exit(main())
-
-
-
-
 

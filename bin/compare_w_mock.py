@@ -4,12 +4,13 @@
 # It uses read count as the x-axis and plots detection stats at the user-specified taxonomic rank.
 # Make sure column names match exactly, especially for ranks (Genus, Family, etc.) — they are case-sensitive.
 # example usage:
-# ./compare_w_mock.py -M 13 -r run_180190 -R Genus --true_composition_file true_composition.csv
+# ./compare_w_mock.py -M 13 -r run_180190 -R Genus --true true_composition.csv
 
 import argparse
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
+import glob
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Compare 16S data with true mock composition.")
@@ -23,8 +24,9 @@ def read_files(mock, run_id, true_comp_file):
     result_dir = "/scratch/shire/ssd/pipeline/16s_nf_pipeline"  # Modify if needed
     data_dir = "/scratch/shire/data/nj/raw_data/published/mockrobiota"  # Modify if needed
 
-    asv_tax_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_tax_species.silva_138.tsv")
-    asv_table_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_table.tsv")
+    asv_tax_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_tax.silva_138_2.tsv.gz")
+    asv_table_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_table.tsv.gz")
+
 
 
     true_comp_path = os.path.join(data_dir, f"mock-{mock}", true_comp_file)

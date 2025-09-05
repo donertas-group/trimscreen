@@ -28,22 +28,22 @@ process DADA2_ERR {
         pattern: "*.log",
         enabled: params.publish_all_runs
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/QC",
+    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/QC",
         mode: params.publish_dir_mode,
         pattern: "*{.pdf,convergence.txt}",
         enabled: "${meta.is_best_run}"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/QC/svg",
+    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/QC/svg",
         mode: params.publish_dir_mode,
         pattern: "*.svg",
         enabled: "${meta.is_best_run}"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/args",
+    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/args",
         mode: params.publish_dir_mode,
         pattern: "*.args.txt",
         enabled: "${meta.is_best_run}"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/log",
+    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/log",
         mode: params.publish_dir_mode,
         pattern: "*.log",
         enabled: "${meta.is_best_run}"
