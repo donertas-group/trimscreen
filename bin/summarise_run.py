@@ -76,11 +76,15 @@ def process_run(summary_file, asv_file, tax_file, run, classifier_dir, ranks):
         results[f'shannon_{rank}'] = shannons
 
     Nasvs = []
+    Nreads = []
     for sample in asv_table.columns.tolist():
         Nasvs.append(asv_table[(asv_table[sample] > 0)][sample].count())
+        Nreads.append(asv_table[(asv_table[sample] > 0)][sample].sum())
+
 
     results['nasvs'] = Nasvs
-    results['total_nasvs'] = asv_table.count()
+    results['nreads'] = Nreads
+    results['nasvs_in_run'] = asv_table.count()
 
     # Create a DataFrame from results
     res_df = pd.DataFrame(results, index=asv_table.columns.tolist())  # Use sample names as index
