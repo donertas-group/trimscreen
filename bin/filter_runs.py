@@ -103,7 +103,7 @@ def main():
 
 
     # get rarefaction depth
-    D = filtered_table['DADA2_input'].min()
+    D = filtered_table['nreads'].min()
 
     # output as [runID, depth] as stdout for nf process
     out = [[run, int(D)] for run in filtered_table['run'].tolist()]
