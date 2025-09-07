@@ -32,7 +32,15 @@ workflow COMPARE_RUNS {
         .splitJson()
         .map { [it[0], it[1]] }
 
-    ch_runs_filtered.view()
+    logged = false
+    ch_runs_filtered.subscribe { value ->
+        // only log for the first element
+        if (!logged) {
+            def reads = value[1]
+            log.info "Rarefy filtered runs to ${reads} reads per sample."
+            logged = true
+        }
+    }
 
     ch_run_data
         .map { meta, stats, asv, tax -> [meta.runID, meta, asv] }

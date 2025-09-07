@@ -15,7 +15,7 @@ process DADA2_TAXONOMY {
 
     publishDir "${params.outdir}/runs/${meta.runID}/dada2",
         mode: params.publish_dir_mode,
-        pattern: "*.tsv",
+        pattern: "*.tsv.gz",
         enabled: params.publish_all_runs
 
     publishDir "${params.outdir}/best_run/${meta.runID}/dada2/args",
@@ -25,7 +25,7 @@ process DADA2_TAXONOMY {
 
     publishDir "${params.outdir}/best_run/${meta.runID}/dada2",
         mode: params.publish_dir_mode,
-        pattern: "*.tsv",
+        pattern: "*.tsv.gz",
         enabled: "${meta.is_best_run}"
 
     input:

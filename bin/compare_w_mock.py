@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # The script expects the input files in a structured directory, as described.
-# It uses read count as the x-axis and plots detection stats at the user-specified taxonomic rank.
+# It uses read count as the x-axis and calculates detection stats and f1 summary score at the user-specified taxonomic rank.
 # Make sure column names match exactly, especially for ranks (Genus, Family, etc.) — they are case-sensitive.
 # example usage:
 # ./compare_w_mock.py -M 13 -r run_180190 -R Genus --true true_composition.csv
@@ -11,6 +11,7 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import glob
+import json
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Compare 16S data with true mock composition.")
@@ -25,9 +26,7 @@ def read_files(mock, run_id, true_comp_file):
     data_dir = "/scratch/shire/data/nj/raw_data/published/mockrobiota"  # Modify if needed
 
     asv_tax_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_tax.silva_138_2.tsv.gz")
-    asv_table_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_table.tsv.gz")
-
-
+    asv_table_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_table_rarefied.tsv.gz")
 
     true_comp_path = os.path.join(data_dir, f"mock-{mock}", true_comp_file)
 
@@ -58,11 +57,28 @@ def prepare_taxa_sets(asv_tax, asv_table, true_comp, rank):
 
     return taxon_reads, true_taxa
 
+def f1_score(y_correct, y_false, y_undetected):
+    tp = y_correct
+    fp = y_false
+    fn = y_undetected
+    
+    if tp == 0 and (fp > 0 or fn > 0):
+        return 0.0  # no true positives, but some errors
+    
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    
+    if precision + recall == 0:
+        return 0.0
+    return 2 * (precision * recall) / (precision + recall)
+
+
 def evaluate_detection(taxon_reads, true_taxa):
     x_reads = []
     y_correct = []
     y_false = []
     y_undetected = []
+    y_f1 = []
 
     seen = set()
 
@@ -75,12 +91,14 @@ def evaluate_detection(taxon_reads, true_taxa):
         correct = len(seen & true_taxa)
         false = len(seen - true_taxa)
         undetected = len(true_taxa - seen)
+        f1 = f1_score(correct, false, undetected)
 
         y_correct.append(correct)
         y_false.append(false)
         y_undetected.append(undetected)
+        y_f1.append(f1)
 
-    return x_reads, y_correct, y_false, y_undetected
+    return x_reads, y_correct, y_false, y_undetected, y_f1
 
 def plot_results(x, correct, false, undetected, mock, run, rank):
     import os
@@ -109,8 +127,11 @@ def main():
     args = parse_args()
     asv_tax, asv_table, true_comp = read_files(args.mock, args.run, args.true)
     taxon_reads, true_taxa = prepare_taxa_sets(asv_tax, asv_table, true_comp, args.rank)
-    x, correct, false, undetected = evaluate_detection(taxon_reads, true_taxa)
-    plot_results(x, correct, false, undetected, args.mock, args.run, args.rank)
+    x, correct, false, undetected, f1 = evaluate_detection(taxon_reads, true_taxa)
+   # plot_results(x, correct, false, undetected, args.mock, args.run, args.rank)
+
+    output = {"x": x, "f1": f1}
+    print(json.dumps(output))
 
 if __name__ == "__main__":
     main()
