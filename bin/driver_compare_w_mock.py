@@ -4,6 +4,7 @@ import json
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 # example usage
 # ./driver_compare_w_mock.py -M 16 -R Genus -X 50 --true true_composition_mock16.csv --runs run_180132 run_176132 run_174132 run_180130 run_174130 run_178132 run_172132 run_176130 run_178131
@@ -26,38 +27,48 @@ def main():
     parser = argparse.ArgumentParser(description="Aggregate compare_w_mock.py results across runs")
     parser.add_argument("-M", required=True, help="Mock dataset number")
     parser.add_argument("-R", required=True, help="Taxnomic rank")
-    parser.add_argument("-X", type=float, required=True, help="Target ASV read number filter value")
+    parser.add_argument("-X", type=int, required=True, help="Target ASV read number filter value")
     parser.add_argument("--true", required=True, help="true_composition.csv file")
     parser.add_argument("--runs", nargs="+", required=True, help="List of run IDs (e.g. run_123456)")
-    parser.add_argument("--out", default="./output/f1_scatter.png", help="Output plot filename")
+    parser.add_argument("--out", default="./output", help="Output plot filename")
     args = parser.parse_args()
 
-    aaa_vals, bbb_vals, f1_vals = [], [], []
+    lenf_vals, lenr_vals, f1_vals = [], [], []
 
     for run_id in args.runs:
         x, f1 = run_compare(args.M, run_id, args.R, args.true)
 
-        # Find index of closest value to X
+        # Find index of closest and no smaller value to X
         idx = int(np.argmin([abs(val - args.X) for val in x]))
+        x = np.array(x) 
+        mask = x >= args.X
+        if np.any(mask):
+            idx = np.where(mask)[0][np.argmin(x[mask] - args.X)]
+        else:
+            idx = None  # no value >= X
+
         x_prime, f1_prime = x[idx], f1[idx]
 
-        # Extract aaa, bbb from run id (last 6 digits)
-        suffix = run_id[-6:]
-        aaa, bbb = int(suffix[:3]), int(suffix[3:])
 
-        aaa_vals.append(aaa)
-        bbb_vals.append(bbb)
+        # Extract lenf, lenr from run id (last 6 digits)
+        suffix = run_id[-6:]
+        lenf, lenr = int(suffix[:3]), int(suffix[3:])
+
+        lenf_vals.append(lenf)
+        lenr_vals.append(lenr)
         f1_vals.append(f1_prime)
 
         print(f"{run_id}: closest X={x_prime}, f1={f1_prime}")
 
     # Scatter plot
-    plt.scatter(aaa_vals, bbb_vals, c=f1_vals, cmap="viridis", s=80)
-    plt.colorbar(label="f1 score")
-    plt.xlabel("aaa (first 3 digits of run suffix)")
-    plt.ylabel("bbb (last 3 digits of run suffix)")
-    plt.title(f"Runs at X={args.X}")
-    plt.savefig(args.out, dpi=300)
+    plt.scatter(lenf_vals, lenr_vals, c=f1_vals, cmap="viridis", s=40)
+    plt.colorbar(label=f"f1 score at {args.R}")
+    plt.xlabel("Forward read length")
+    plt.ylabel("Reverse read length")
+    plt.title(f"Mock {args.M}, min {args.X} reads/ASV")
+
+    outfile = os.path.join(args.out, f"f1_scatter_mock{args.M}_{args.R}_min{args.X}.rarefied.png")
+    plt.savefig(outfile, dpi=300)
 
 if __name__ == "__main__":
     main()
