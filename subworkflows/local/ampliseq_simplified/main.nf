@@ -614,12 +614,22 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_dada2_asv = FILTER_LEN_ASV.out.asv
         // Make sure that not all sequences were removed. Modified: report by run
        //ch_dada2_fasta.subscribe { if (it.countLines() == 0) error("ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs, please adjust settings.") }
-        ch_dada2_fasta.subscribe { 
+       /* ch_dada2_fasta.subscribe { 
             meta, file -> 
             if (file.countLines() == 0) 
-                error("ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs for  ${meta.run}, please adjust settings.") 
-        }
+                error("ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs for ${meta.run}, please adjust settings.") 
+        }*/
     
+        ch_dada2_fasta = ch_dada2_fasta.filter { meta, file ->
+            if (file.countLines() == 0) {
+                log.warn "ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs for ${meta.run}. This run is dropped. Please adjust settings."
+                return false   // drop this tuple
+            }
+            return true        // keep it
+        }
+
+
+
 }
 
         ch_full_fasta = ch_dada2_fasta    
