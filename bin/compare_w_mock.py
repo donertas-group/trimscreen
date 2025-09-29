@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument("-M", "--mock", required=True, type=int, help="Mock community number")
     parser.add_argument("-r", "--run", required=True, type=str, help="Run ID")
     parser.add_argument("-R", "--rank", required=True, type=str, help="Taxonomic rank to compare (e.g., Genus)")
-    parser.add_argument("--true", required=True, type=str, help="Path to true composition CSV file")
+    parser.add_argument("--true", default='true_composition.csv', required=True, type=str, help="Path to true composition CSV file")
     return parser.parse_args()
 
 def read_files(mock, run_id, true_comp_file):
@@ -26,7 +26,8 @@ def read_files(mock, run_id, true_comp_file):
     data_dir = "/scratch/shire/data/nj/raw_data/published/mockrobiota"  # Modify if needed
 
     asv_tax_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_tax.silva_138_2.tsv.gz")
-    asv_table_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_table_rarefied.tsv.gz")
+    asv_table_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_table.tsv.gz")
+    summary_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "overall_summary.tsv")
 
     true_comp_path = os.path.join(data_dir, f"mock-{mock}", true_comp_file)
 
@@ -37,8 +38,9 @@ def read_files(mock, run_id, true_comp_file):
     asv_table = asv_table.rename(columns={read_col_name: 'N_reads'})
 
     true_comp = pd.read_csv(true_comp_path)
+    summary_table = pd.read_csv(summary_file, sep='\t')
 
-    return asv_tax, asv_table, true_comp
+    return asv_tax, asv_table, true_comp, summary_table
 
 def prepare_taxa_sets(asv_tax, asv_table, true_comp, rank):
     # Merge ASV table and tax info
@@ -125,12 +127,16 @@ def plot_results(x, correct, false, undetected, mock, run, rank):
 
 def main():
     args = parse_args()
-    asv_tax, asv_table, true_comp = read_files(args.mock, args.run, args.true)
+    asv_tax, asv_table, true_comp, summary_table = read_files(args.mock, args.run, args.true)
     taxon_reads, true_taxa = prepare_taxa_sets(asv_tax, asv_table, true_comp, args.rank)
     x, correct, false, undetected, f1 = evaluate_detection(taxon_reads, true_taxa)
+    
+    nreads_nonchim = summary_table['nonchim'].iloc[0]
+
    # plot_results(x, correct, false, undetected, args.mock, args.run, args.rank)
 
     output = {"x": x, "f1": f1}
+    output2 = {"nreads": int(nreads_nonchim)}
     print(json.dumps(output))
 
 if __name__ == "__main__":

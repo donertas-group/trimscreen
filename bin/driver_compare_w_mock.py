@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import os
 
 # example usage
-# ./driver_compare_w_mock.py -M 16 -R Genus -X 50 --true true_composition_mock16.csv --runs run_180132 run_176132 run_174132 run_180130 run_174130 run_178132 run_172132 run_176130 run_178131
+# ./driver_compare_w_mock.py -M 16 -R Genus -X 50 --true true_composition.csv --runs run_180132 run_176132 run_174132 run_180130 run_174130 run_178132 run_172132 run_176130 run_178131
 
 
 def run_compare(M, run_id, R, true_file):
@@ -28,37 +28,43 @@ def main():
     parser.add_argument("-M", required=True, help="Mock dataset number")
     parser.add_argument("-R", required=True, help="Taxnomic rank")
     parser.add_argument("-X", type=int, required=True, help="Target ASV read number filter value")
-    parser.add_argument("--true", required=True, help="true_composition.csv file")
+    parser.add_argument("--true", default="true_composition.csv, required=True, help="true_composition.csv file")
     parser.add_argument("--runs", nargs="+", required=True, help="List of run IDs (e.g. run_123456)")
     parser.add_argument("--out", default="./output", help="Output plot filename")
     args = parser.parse_args()
 
     lenf_vals, lenr_vals, f1_vals = [], [], []
 
-    for run_id in args.runs:
-        x, f1 = run_compare(args.M, run_id, args.R, args.true)
+    with open(os.path.join(args.out, f"f1_scores_mock{args.M}_{args.R}_min{args.X}.txt"), "w") as f:
+        # add header
+        f.write("run_id\ttrunclenf\ttrunclenr\tasv_abund_threshold\tf1_score\n")
 
-        # Find index of closest and no smaller value to X
-        idx = int(np.argmin([abs(val - args.X) for val in x]))
-        x = np.array(x) 
-        mask = x >= args.X
-        if np.any(mask):
-            idx = np.where(mask)[0][np.argmin(x[mask] - args.X)]
-        else:
-            idx = None  # no value >= X
+        for run_id in args.runs:
+            x, f1 = run_compare(args.M, run_id, args.R, args.true)
 
-        x_prime, f1_prime = x[idx], f1[idx]
+            # Find index of closest and no smaller value to X
+            idx = int(np.argmin([abs(val - args.X) for val in x]))
+            x = np.array(x) 
+            mask = x >= args.X
+            if np.any(mask):
+                idx = np.where(mask)[0][np.argmin(x[mask] - args.X)]
+            else:
+                idx = None  # no value >= X
 
+            x_prime, f1_prime = x[idx], f1[idx]
 
-        # Extract lenf, lenr from run id (last 6 digits)
-        suffix = run_id[-6:]
-        lenf, lenr = int(suffix[:3]), int(suffix[3:])
+            # Extract lenf, lenr from run id (last 6 digits)
+            suffix = run_id[-6:]
+            lenf, lenr = int(suffix[:3]), int(suffix[3:])
 
-        lenf_vals.append(lenf)
-        lenr_vals.append(lenr)
-        f1_vals.append(f1_prime)
+            lenf_vals.append(lenf)
+            lenr_vals.append(lenr)
+            f1_vals.append(f1_prime)
 
-        print(f"{run_id}: closest X={x_prime}, f1={f1_prime}")
+            f.write(f"{run_id}\t{lenf}\t{lenr}\t{x_prime}\t{f1_prime}\n")
+           # print(f"{run_id}: closest X={x_prime}, f1={f1_prime}")
+
+    print(f"All results saved to {os.path.join(args.out, 'f1_scores.txt')}")
 
     # Scatter plot
     plt.scatter(lenf_vals, lenr_vals, c=f1_vals, cmap="viridis", s=40)
