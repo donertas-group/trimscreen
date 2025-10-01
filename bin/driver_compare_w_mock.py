@@ -28,7 +28,7 @@ def main():
     parser.add_argument("-M", required=True, help="Mock dataset number")
     parser.add_argument("-R", required=True, help="Taxnomic rank")
     parser.add_argument("-X", type=int, required=True, help="Target ASV read number filter value")
-    parser.add_argument("--true", default="true_composition.csv, required=True, help="true_composition.csv file")
+    parser.add_argument("--true", default="true_composition.csv", help="true_composition.csv file")
     parser.add_argument("--runs", nargs="+", required=True, help="List of run IDs (e.g. run_123456)")
     parser.add_argument("--out", default="./output", help="Output plot filename")
     args = parser.parse_args()

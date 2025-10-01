@@ -17,6 +17,16 @@ def parse_args(args=None):
     parser.add_argument("-R", "--rank", required=True, help="Taxonomic rank to calculate beta")
     return parser.parse_args()
 
+def ruzicka(u, v):
+    """Compute the Ruzicka (abundance-based Jaccard) similarity between two vectors."""
+    u, v = np.asarray(u), np.asarray(v)
+    numerator = np.minimum(u, v).sum()
+    denominator = np.maximum(u, v).sum()
+    if denominator == 0:  # avoid division by zero
+        return 0.0
+    return 1-(numerator / denominator)
+
+
 def main():
     args = parse_args()
     mock_no = args.mock_number
@@ -85,20 +95,25 @@ def main():
     #agg_table.to_csv('agg_table.csv', index=False)
 
 
-    # 8. Calculate Bray-Curtis beta diversity
-    # Transpose so rows = samples, columns = features
+    # 8. Calculate Bray-Curtis and Ruzicka beta diversity
     bray_curtis_matrix = pd.DataFrame(
         squareform(pdist(agg_table.T, metric='braycurtis')),
         index=agg_table.columns,
         columns=agg_table.columns
     )
 
-    #bray_curtis_matrix.to_csv('bray_curtis_matrix.csv', index=True)
+    ruzicka_matrix = pd.DataFrame(
+        squareform(pdist(agg_table.T, metric=ruzicka)),
+        index=agg_table.columns,
+        columns=agg_table.columns
+    )
+
+    betadiv_matrix = ruzicka_matrix
 
     # 9. Plot heatmap
-    # Assume bray_curtis_matrix is a square DataFrame with ASV_IDs as index and columns
+    # Assume betadiv_matrix is a square DataFrame with ASV_IDs as index and columns
     # Step 1: Convert to condensed form for clustering
-    condensed_dist = ssd.squareform(bray_curtis_matrix.values)
+    condensed_dist = ssd.squareform(betadiv_matrix.values)
 
     # Step 2: Compute linkage
     linkage = sch.linkage(condensed_dist, method='average')  # or other method
@@ -108,22 +123,22 @@ def main():
     ordered_indices = dendro['leaves']
 
     # Step 4: Get ASV_IDs in the new order
-    ordered_labels = bray_curtis_matrix.index[ordered_indices]
+    ordered_labels = betadiv_matrix.index[ordered_indices]
 
     # Step 5: Reorder the matrix using label-based indexing
-    ordered_matrix = bray_curtis_matrix.loc[ordered_labels, ordered_labels]
+    ordered_matrix = betadiv_matrix.loc[ordered_labels, ordered_labels]
 
     # Step 6: Plot the heatmap and save to PDF
     plt.figure(figsize=(12, 12))
     sns.heatmap(ordered_matrix, cmap="viridis", xticklabels=False, yticklabels=False)
-    plt.title(f"Bray-Curtis Beta Diversity Heatmap (Clustered) at {rank}")
+    plt.title(f"Beta Diversity Heatmap (Clustered) at {rank}")
     plt.tight_layout()
     plt.savefig(f"./output/bray_curtis_heatmap_clustered_mock{mock_no}_{rank}.jpg", dpi=300, bbox_inches='tight')
 
 
     # 10. Find the most central cluster
     # Step 1: Find the "central" run — lowest average distance to all others
-    avg_distances = bray_curtis_matrix.mean(axis=0)
+    avg_distances = betadiv_matrix.mean(axis=0)
     central_run = avg_distances.idxmin()
     print(f"Central run (most consensus-like): {central_run}")
 
@@ -135,18 +150,18 @@ def main():
     # Step 3: Score each cluster
     cluster_scores = {}
     unique_clusters = np.unique(cluster_assignments)
-    labels = bray_curtis_matrix.index.to_numpy()
+    labels = betadiv_matrix.index.to_numpy()
 
     for c in unique_clusters:
         member_indices = np.where(cluster_assignments == c)[0]
         member_labels = labels[member_indices]
         
         # Intra-cluster distance
-        intra_dist = bray_curtis_matrix.loc[member_labels, member_labels]
+        intra_dist = betadiv_matrix.loc[member_labels, member_labels]
         mean_intra = intra_dist.values[np.triu_indices_from(intra_dist.values, k=1)].mean()
         
         # Mean distance to central run
-        to_central = bray_curtis_matrix.loc[member_labels, central_run].mean()
+        to_central = betadiv_matrix.loc[member_labels, central_run].mean()
         
         # Record score
         cluster_scores[c] = {
