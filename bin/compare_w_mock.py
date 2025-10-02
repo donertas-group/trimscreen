@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument("-M", "--mock", required=True, type=int, help="Mock community number")
     parser.add_argument("-r", "--run", required=True, type=str, help="Run ID")
     parser.add_argument("-R", "--rank", required=True, type=str, help="Taxonomic rank to compare (e.g., Genus)")
-    parser.add_argument("--true", default='true_composition.csv', required=True, type=str, help="Path to true composition CSV file")
+    parser.add_argument("--true", default="true_composition.csv", type=str, help="Path to true composition CSV file")
     return parser.parse_args()
 
 def read_files(mock, run_id, true_comp_file):
