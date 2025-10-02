@@ -5,6 +5,7 @@ import numpy as np
 import sys
 import argparse
 import json
+from typing import List, Tuple, Dict
 
 def parse_args(args=None):
 
@@ -14,80 +15,85 @@ def parse_args(args=None):
 
     return parser.parse_args()
 
-def filter_runs(df, columns):
-    import numpy as np
+def find_good_runs(df: pd.DataFrame, columns: List[str]) -> List[str]:
+    """
+    Return run(s) that keep the largest total number of samples after applying,
+    for each column, a sample-level mean±std filter across runs.
 
-    # Convert specified columns to numeric
+    Args:
+      df: DataFrame containing at least ['run','sample'] + columns
+      columns: list of column names to apply the procedure to (e.g. ['Genus','Family'])
+      min_run_samples: only consider runs that have >= this many samples (default 2)
+
+    Returns:
+      list of run names (ties are returned as multiple runs)
+    """
+    # defensive copy
+    df = df.copy()
+
+    # ensure numeric columns
     df[columns] = df[columns].apply(pd.to_numeric, errors='coerce')
+    runs = df['run'].unique().tolist()
+    # consider only runs with >= min_run_samples samples (this defines df_multi)
+    #run_counts = df['run'].value_counts()
+    #multi_sample_runs = run_counts[run_counts > 1].index.tolist()
+    #df_multi = df[df['run'].isin(multi_sample_runs)].copy()
 
-    # Track sets of "good" runs for each column
-    results = {}
+    #single_sample_runs = run_counts[run_counts == 1].index.tolist()
+    #df_single = df[df['run'].isin(single_sample_runs)].copy()
 
-    for column in columns:
-        # Count how many samples each run has
-        run_counts = df['run'].value_counts()
+    #if df_multi.empty:
+    #    return []
 
-        # Split into two DataFrames:
-        # - one with multiple samples per run
-        # - one with single sample per run
-        multi_sample_runs = run_counts[run_counts > 1].index
-        single_sample_runs = run_counts[run_counts == 1].index
+    # initialize total retained-sample counts per run
+    total_retained_per_run: Dict[str,int] = {run: 0 for run in runs}
 
-        df_multi = df[df['run'].isin(multi_sample_runs)]
-        df_single = df[df['run'].isin(single_sample_runs)]
+    for col in columns:
+        # compute per-sample mean and std across runs
+        sample_stats = (
+            df
+            .groupby('sample')[col]
+            .agg(mean='mean', std='std')
+            .reset_index()
+        )
 
-        # -------------------------
-        # Case 1: Multi-sample runs
-        # -------------------------
-        if not df_multi.empty:
-            grouped = df_multi.groupby('run')[column].agg(['median', 'std']).reset_index()
+        # treat NaN std (single observation for that sample) as 0
+        sample_stats['std'] = sample_stats['std'].fillna(0.0)
 
-            # Compute global stats for medians and stds
-            median_mean = grouped['median'].mean()
-            median_std = grouped['median'].std()
-            median_lower, median_upper = median_mean - 1 * median_std, median_mean + 1 * median_std
+        # compute lower/upper bounds (mean ± std)
+        sample_stats['low'] = sample_stats['mean'] - sample_stats['std']
+        sample_stats['high'] = sample_stats['mean'] + sample_stats['std']
 
-            std_mean = grouped['std'].mean()
-            std_std = grouped['std'].std()
-            std_lower, std_upper = std_mean - 1 * std_std, std_mean + 1 * std_std
+        # join bounds back to df
+        merged = df.merge(
+            sample_stats[['sample','mean','std','low','high']],
+            on='sample',
+            how='left',
+            validate='m:1'  # many rows in df to one row in sample_stats
+        )
 
-            # Keep runs within 1-sigma bounds
-            filtered_multi = grouped[
-                (grouped['median'] >= median_lower) & (grouped['median'] <= median_upper) &
-                (grouped['std'] >= std_lower) & (grouped['std'] <= std_upper)
-            ]
+        # keep run-rows whose value is within sample_mean ± sample_std
+        # (NaN values in the column will be treated as not within bounds)
+        within_mask = (
+            merged[col].notna() &
+            (merged[col] >= merged['low']) &
+            (merged[col] <= merged['high'])
+        )
+        kept = merged.loc[within_mask, ['run','sample']].drop_duplicates()
 
-            good_multi_runs = set(filtered_multi['run'])
-        else:
-            good_multi_runs = set()
+        # count how many distinct samples each run kept for THIS column
+        if not kept.empty:
+            per_run_counts = kept.groupby('run')['sample'].nunique()
+            # add to totals (runs with 0 kept samples naturally add 0)
+            for run, cnt in per_run_counts.items():
+                total_retained_per_run[run] += int(cnt)
+        # otherwise no run gains any counts for this column
 
-        # -------------------------
-        # Case 2: Single-sample runs
-        # -------------------------
-        if not df_single.empty:
-            values = df_single[column]
-            val_mean = values.mean()
-            val_std = values.std()
-            lower, upper = val_mean - 1 * val_std, val_mean + 1 * val_std
+    # find run(s) with the maximum total retained samples
+    max_kept = max(total_retained_per_run.values())
+    good_runs = [run for run, cnt in total_retained_per_run.items() if cnt == max_kept]
 
-            filtered_single = df_single[
-                (df_single[column] >= lower) & (df_single[column] <= upper)
-            ]
-
-            good_single_runs = set(filtered_single['run'])
-        else:
-            good_single_runs = set()
-
-        # Merge good runs for this column
-        results[column] = good_multi_runs.union(good_single_runs)
-
-    # Find runs that passed *all* filters
-    common_runs = set.intersection(*results.values())
-
-    # Return filtered DataFrame
-    filtered_df = df[df['run'].isin(common_runs)]
-
-    return filtered_df
+    return good_runs
 
 
 def main():
@@ -98,15 +104,15 @@ def main():
 
     full_table = pd.read_csv(file)
 
-    # filter runs by evaluating the median and sd of choosen columns
-    filtered_table = filter_runs(full_table, columns_to_filter)
-
+    # find good runs by evaluating the per-sample median and sd of choosen columns
+    good_runs = find_good_runs(full_table, columns_to_filter)
+    filtered_table = full_table[full_table['run'].isin(good_runs)]
 
     # get rarefaction depth
     D = filtered_table['nreads'].min()
 
     # output as [runID, depth] as stdout for nf process
-    out = [[run, int(D)] for run in filtered_table['run'].tolist()]
+    out = [[run, int(D)] for run in good_runs]
     print(json.dumps(out))
     
     filtered_table.to_csv("filtered_table.csv", index=False)
