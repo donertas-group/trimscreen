@@ -4,6 +4,21 @@ include { GENERATE_PARAMS                                           } from '../.
 include { COMPARE_RUNS                  } from '../../../subworkflows/local/compare_runs/main'
 include { CREATE_LINK                   } from '../../../modules/local/create_link'
 
+
+// Input
+if (params.metadata) {
+    //ch_metadata = Channel.fromPath("${params.metadata}", checkIfExists: true)
+    ch_metadata = Channel
+        .fromPath(params.metadata, checkIfExists: true)
+        .splitCsv(header: true)
+    
+    ch_metadata_samples = ch_metadata.filter { row -> row.condition == "sample" }
+        .map { it.sampleID }
+
+} else { ch_metadata = Channel.empty() }
+
+
+
 workflow AMPLISEQ_SCREENING {
     take:
     ch_samplesheet
@@ -48,13 +63,23 @@ workflow AMPLISEQ_SCREENING {
            return tuple(row.runID, row.trunclenf, row.trunclenr, is_best_run) } 
 
     // Subset samples 
-    ch_is_best_run = ch_params.map { runID, trunclenf, trunclenr, is_best_run ->
-        is_best_run
-    }.unique()
+    ch_is_best_run = ch_params
+        .map { runID, trunclenf, trunclenr, is_best_run -> is_best_run }
+        .unique()
 
     subset_samples = params.subset_samples ?: false
 
-    ch_samplesheet_subset = ch_samplesheet.collect()
+
+    // restrict to samples only
+    if (params.metadata) {
+        ch_samplesheet_samples = ch_samplesheet
+            .map { meta, read1, read2 -> [meta.id, [meta, read1, read2]] }
+            .join (ch_metadata_samples)
+            .map { id, tuple -> tuple }            
+    }
+    else { ch_samplesheet_samples = ch_samplesheet }
+
+    ch_samplesheet_subset = ch_samplesheet_samples.collect()
         .combine (ch_is_best_run)
         .map { tuple ->
             def is_best_run = tuple[-1]
@@ -68,7 +93,7 @@ workflow AMPLISEQ_SCREENING {
                     return all_samples
                 }
             } else {
-                log.info "Using all ${all_samples.size()} samples for screening"
+                log.info "Using all ${all_samples.size()} non-control samples for screening"
                 return all_samples
             }
         }
