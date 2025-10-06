@@ -72,12 +72,12 @@ def find_good_runs(df: pd.DataFrame, columns: List[str]) -> List[str]:
             validate='m:1'  # many rows in df to one row in sample_stats
         )
 
-        # keep run-rows whose value is within sample_mean ± sample_std
+        # keep run-rows whose value is above sample_mean - sample_std
         # (NaN values in the column will be treated as not within bounds)
         within_mask = (
             merged[col].notna() &
-            (merged[col] >= merged['low']) &
-            (merged[col] <= merged['high'])
+            (merged[col] >= merged['low']) #&
+            #(merged[col] <= merged['high'])
         )
         kept = merged.loc[within_mask, ['run','sample']].drop_duplicates()
 
