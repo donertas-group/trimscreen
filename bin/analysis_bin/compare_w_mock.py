@@ -103,8 +103,6 @@ def evaluate_detection(taxon_reads, true_taxa):
     return x_reads, y_correct, y_false, y_undetected, y_f1
 
 def plot_results(x, correct, false, undetected, mock, run, rank):
-    import os
-
     output_dir = "./output"
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"detection_curve_mock{mock}.{run}.{rank}.png")
