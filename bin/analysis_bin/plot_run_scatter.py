@@ -144,8 +144,8 @@ def fplot_results(full_table, filtered_table, column, dataset, result_dir):
 
     plt.colorbar(scatter, label=column)
     plt.title(f"Run-wise {column} averages ({dataset})")
-    plt.xlabel("forward truncation length")
-    plt.ylabel("reverse truncation length")
+    plt.xlabel("forward read length after truncation")
+    plt.ylabel("reverse read length after truncation")
 
     output_dir = os.path.join(result_dir, "analysis_mock/output")
     os.makedirs(output_dir, exist_ok=True)
