@@ -30,7 +30,7 @@ def main():
     parser.add_argument("-X", type=int, required=True, help="Target ASV read number filter value")
     parser.add_argument("--true", default="true_composition.csv", help="true_composition.csv file")
     parser.add_argument("--runs", nargs="+", required=True, help="List of run IDs (e.g. run_123456)")
-    parser.add_argument("--out", default="./output", help="Output plot filename")
+    parser.add_argument("--out", default="/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output", help="Output plot filename")
     args = parser.parse_args()
 
     lenf_vals, lenr_vals, f1_vals = [], [], []
