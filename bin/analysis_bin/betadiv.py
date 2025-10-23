@@ -1,5 +1,8 @@
 #!/usr/bin/env python
+
+# example usage: ./betadiv.py -D mock16 -R Genus
 import os
+import re
 import pandas as pd
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -13,8 +16,10 @@ import sys
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Calculate beta-diversity for mock dataset")
-    parser.add_argument("-M", "--mock_number", required=True, help="Mock dataset number")
+    parser.add_argument("-D", "--dataset_name", required=True, help="Dataset name")
     parser.add_argument("-R", "--rank", required=True, help="Taxonomic rank to calculate beta")
+    parser.add_argument("--out", default="/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output", help="Output dir")
+
     return parser.parse_args()
 
 def ruzicka(u, v):
@@ -29,24 +34,28 @@ def ruzicka(u, v):
 
 def main():
     args = parse_args()
-    mock_no = args.mock_number
     rank = args.rank
 
-    # 1. Set sample ID
-    sampleID = "mock_"+ mock_no
-    base_dir = "../mock"+mock_no+"/output"
+    # 1. Set dataset directories
+    base_dir = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.dataset_name}/output"
     compare_runs_csv = os.path.join(base_dir, "compare_runs", "filtered_table.csv")
 
     # 2. Get run list
     df_runs = pd.read_csv(compare_runs_csv)
     run_list = df_runs['run'].dropna().unique().tolist()
 
-    # 3. Read ASV tables and merge
+    # 3. Read ASV tables for each run
     asv_tables = []
     for run in run_list:
-        path = os.path.join(base_dir, "runs", run, "dada2", "ASV_table.tsv")
-        df = pd.read_csv(path, sep="\t", usecols=["ASV_ID", sampleID])
-        df = df.rename(columns={sampleID: run})
+        path = os.path.join(base_dir, "runs", run, "dada2", "ASV_table.tsv.gz")
+        df = pd.read_csv(path, sep="\t")
+
+        # Identify all sample columns (everything except ASV_ID)
+        sample_cols = [col for col in df.columns if col != "ASV_ID"]
+
+        # Rename each sample column to include the run prefix
+        df = df.rename(columns={col: f"{run}_{col}" for col in sample_cols})
+
         asv_tables.append(df)
 
     # 4. Full outer join on ASV_ID
@@ -56,54 +65,60 @@ def main():
 
     asv_table_full = asv_table_full.fillna(0)
     asv_table_full.set_index("ASV_ID", inplace=True)
+    asv_table_full.to_csv(os.path.join(args.out, f'asv_table_full.{args.dataset_name}.csv'), index=True)
+    
+    # 5. Filter low abundance ASVs
     asv_table_full_filtered = asv_table_full[asv_table_full.max(axis=1) >= 20]
 
-    # 5 Rarefy each run to the same sequencing depth (per column)
-    # Convert to integers to ensure counts are valid
+    # Convert to integers
     asv_table_full_filtered = asv_table_full_filtered.astype(int)
-    asv_table_full_filtered.to_csv('./output/asv_table_full_filtered.csv', index=True)
+    asv_table_full_filtered.to_csv(os.path.join(args.out, f'asv_table_full_filtered.{args.dataset_name}.csv'), index=True)
 
-    # Determine the minimum sequencing depth (excluding 0)
+    # 6. Rarefy each sample to the same depth
     min_depth = asv_table_full_filtered.sum(axis=0).min()
-    print(f"rarefy to {min_depth} reads:")
+    print(f"Rarefying to {min_depth} reads per sample...")
 
-    # Perform rarefaction per run (column)
-    rarefied_asv_table = asv_table_full_filtered.apply(lambda col: pd.Series(subsample_counts(col.values, n=min_depth), index=col.index), axis=0)
-    rarefied_asv_table.to_csv('./output/rarefied_asv_table.csv', index=True)
+    rarefied_asv_table = asv_table_full_filtered.apply(
+        lambda col: pd.Series(subsample_counts(col.values, n=min_depth), index=col.index),
+        axis=0
+    )
 
-
-    # 6. Merge ASV tax tables
+    # 7. Merge taxonomic information
     tax_tables = []
     for run in run_list:
-        path = os.path.join(base_dir, "runs", run, "dada2", "ASV_tax_species.silva_138.tsv")
+        path = os.path.join(base_dir, "runs", run, "dada2", "ASV_tax_species.silva_138_2.tsv.gz")
         df_tax = pd.read_csv(path, sep="\t")
         tax_tables.append(df_tax)
 
     asv_tax_full = pd.concat(tax_tables).drop_duplicates(subset="ASV_ID")
     asv_tax_full.set_index("ASV_ID", inplace=True)
 
-    # Ensure tax and count table match
-    asv_tax_full.to_csv('./output/asv_tax_full.csv', index=True)
-    common_index = asv_table_full_filtered.index.intersection(asv_tax_full.index)
-    asv_table_full_filtered = asv_table_full_filtered.loc[common_index]
+    # Align taxa and abundance tables
+    common_index = rarefied_asv_table.index.intersection(asv_tax_full.index)
+    rarefied_asv_table = rarefied_asv_table.loc[common_index]
     asv_tax_full = asv_tax_full.loc[common_index]
 
-    # 7. Aggregate counts at a given taxonomic rank (e.g., "Genus")
+    # 8. Aggregate counts by rank
     merged = rarefied_asv_table.join(asv_tax_full[[rank]])
     agg_table = merged.groupby(rank).sum()
 
-    #agg_table.to_csv('agg_table.csv', index=False)
+    # Collapse sample columns by run
+    agg_table_by_run = agg_table.groupby(
+        agg_table.columns.str.extract(r'(^[^_]+)')[0],  # extract run prefix
+        axis=1
+    ).sum()
 
-
-    # 8. Calculate Bray-Curtis and Ruzicka beta diversity
+    # 9. compute Bray-Curtis between runs
     bray_curtis_matrix = pd.DataFrame(
-        squareform(pdist(agg_table.T, metric='braycurtis')),
-        index=agg_table.columns,
-        columns=agg_table.columns
+        squareform(pdist(agg_table_by_run.T, metric='braycurtis')),
+        index=agg_table_by_run.columns,
+        columns=agg_table_by_run.columns
     )
 
+    # bray_curtis_matrix.to_csv(os.path.join(args.out, 'bray_curtis_matrix.csv'))
+        
     ruzicka_matrix = pd.DataFrame(
-        squareform(pdist(agg_table.T, metric=ruzicka)),
+        squareform(pdist(agg_table_by_run.T, metric=ruzicka)),
         index=agg_table.columns,
         columns=agg_table.columns
     )
@@ -133,7 +148,7 @@ def main():
     sns.heatmap(ordered_matrix, cmap="viridis", xticklabels=False, yticklabels=False)
     plt.title(f"Beta Diversity Heatmap (Clustered) at {rank}")
     plt.tight_layout()
-    plt.savefig(f"./output/bray_curtis_heatmap_clustered_mock{mock_no}_{rank}.jpg", dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(args.out, f"betadiv_heatmap_clustered_{args.dataset_name}_{rank}.jpg"), dpi=300, bbox_inches='tight')
 
 
     # 10. Find the most central cluster
@@ -186,7 +201,7 @@ def main():
     print(f"Mean intra-cluster distance: {best_cluster_info['intra_cluster_distance']:.4f}")
 
     # Step 5 (optional): Export best cluster members
-    pd.Series(best_cluster_info['members']).to_csv('output/best_cluster_runs.csv', index=False, header=False)
+    pd.Series(best_cluster_info['members']).to_csv(os.path.join(args.out, 'best_cluster_runs.csv'), index=False, header=False)
 
 if __name__ == "__main__":
     sys.exit(main())

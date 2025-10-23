@@ -13,7 +13,7 @@ import re
 def parse_args():
     parser = argparse.ArgumentParser(description="Plot run-level statistics with coordinate extraction from run IDs.")
     parser.add_argument("-D", "--dataset", required=True, type=str, help="Dataset directory name (e.g. mock16)")
-    parser.add_argument("-C", "--column", required=True, type=str, choices=["retained_reads_percent", "nasvs", "Phylum_pasv", "Family_pasv", "Genus_pasv"],
+    parser.add_argument("-C", "--column", required=True, type=str, choices=["retained_reads_percent", "nasvs", "Phylum_pasv", "Family_pasv", "Genus_pasv", "shannon_Genus"],
                         help="Summary metric to visualize (e.g., Genus_pasv)")
     return parser.parse_args()
 

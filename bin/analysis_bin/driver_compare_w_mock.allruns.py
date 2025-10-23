@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 # example usage
-# ./driver_compare_w_mock.allruns.py -M 16 -R Genus -X 50 
+# ./driver_compare_w_mock.allruns.py -M 16 -R Genus -X 10 
 
 def old_run_compare(M, run_id, R, true_file):
     """Call compare_w_mock.py and capture (x, f1) output."""
@@ -61,10 +61,10 @@ def main():
     parser.add_argument("--out", default="/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output", help="Output plot filename")
     args = parser.parse_args()
 
-    fu_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/mock{args.M}/output/compare_runs/full_table.csv"
+    fu_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.M}/output/compare_runs/full_table.csv"
     fu_tb = pd.read_csv(fu_tb_path)
     
-    fi_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/mock{args.M}/output/compare_runs/filtered_table.csv"
+    fi_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.M}/output/compare_runs/filtered_table.csv"
     fi_tb = pd.read_csv(fi_tb_path)
 
     runs = fu_tb['run'].astype(str).tolist()

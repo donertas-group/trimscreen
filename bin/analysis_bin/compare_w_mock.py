@@ -4,7 +4,7 @@
 # It uses read count as the x-axis and calculates detection stats and f1 summary score at the user-specified taxonomic rank.
 # Make sure column names match exactly, especially for ranks (Genus, Family, etc.) — they are case-sensitive.
 # example usage:
-# ./compare_w_mock.py -M 13 -r run_180190 -R Genus --true true_composition.csv
+# ./compare_w_mock.py -M mock13 -r run_180190 -R Genus --true true_composition.csv
 
 import argparse
 import pandas as pd
@@ -15,7 +15,7 @@ import json
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Compare 16S data with true mock composition.")
-    parser.add_argument("-M", "--mock", required=True, type=int, help="Mock community number")
+    parser.add_argument("-M", "--mock", required=True, type=str, help="Mock community (e.g. mock02)")
     parser.add_argument("-r", "--run", required=True, type=str, help="Run ID")
     parser.add_argument("-R", "--rank", required=True, type=str, help="Taxonomic rank to compare (e.g., Genus)")
     parser.add_argument("--true", default="true_composition.csv", type=str, help="Path to true composition CSV file")
@@ -25,11 +25,13 @@ def read_files(mock, run_id, true_comp_file):
     result_dir = "/scratch/shire/ssd/pipeline/16s_nf_pipeline"  # Modify if needed
     data_dir = "/scratch/shire/data/nj/raw_data/published/mockrobiota"  # Modify if needed
 
-    asv_tax_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_tax.silva_138_2.tsv.gz")
-    asv_table_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "dada2/ASV_table.tsv.gz")
-    summary_file = os.path.join(result_dir, f"mock{mock}", "output/runs", run_id, "overall_summary.tsv")
+    asv_tax_file = os.path.join(result_dir, f"{mock}", "output/runs", run_id, "dada2/ASV_tax.silva_138_2.tsv.gz")
+    asv_table_file = os.path.join(result_dir, f"{mock}", "output/runs", run_id, "dada2/ASV_table.tsv.gz")
+    summary_file = os.path.join(result_dir, f"{mock}", "output/runs", run_id, "overall_summary.tsv")
 
-    true_comp_path = os.path.join(data_dir, f"mock-{mock}", true_comp_file)
+    mock_dir = mock.replace("mock", "mock-")
+
+    true_comp_path = os.path.join(data_dir, mock_dir, true_comp_file)
 
     asv_tax = pd.read_csv(asv_tax_file, sep='\t')
     asv_table = pd.read_csv(asv_table_file, sep='\t')
@@ -105,7 +107,7 @@ def evaluate_detection(taxon_reads, true_taxa):
 def plot_results(x, correct, false, undetected, mock, run, rank):
     output_dir = "./output"
     os.makedirs(output_dir, exist_ok=True)
-    output_file = os.path.join(output_dir, f"detection_curve_mock{mock}.{run}.{rank}.png")
+    output_file = os.path.join(output_dir, f"detection_curve_{mock}.{run}.{rank}.png")
 
     plt.figure(figsize=(10, 6))
     plt.plot(x, correct, label=f"Correctly detected {rank}", color='green')
@@ -114,7 +116,7 @@ def plot_results(x, correct, false, undetected, mock, run, rank):
     plt.xscale('log')
     plt.xlabel("Read number (log scale)")
     plt.ylabel(f"Number of taxa at rank '{rank}'")
-    plt.title(f"Mock{mock}, taxon detection at {rank} level, {run}")
+    plt.title(f"{mock}, taxon detection at {rank} level, {run}")
     plt.legend()
     plt.tight_layout()
     plt.grid(True)
