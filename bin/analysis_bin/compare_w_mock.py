@@ -23,15 +23,17 @@ def parse_args():
 
 def read_files(mock, run_id, true_comp_file):
     result_dir = "/scratch/shire/ssd/pipeline/16s_nf_pipeline"  # Modify if needed
-    data_dir = "/scratch/shire/data/nj/raw_data/published/mockrobiota"  # Modify if needed
+    data_dir = "/scratch/shire/data/nj/raw_data/published"  # Modify if needed
 
     asv_tax_file = os.path.join(result_dir, f"{mock}", "output/runs", run_id, "dada2/ASV_tax.silva_138_2.tsv.gz")
     asv_table_file = os.path.join(result_dir, f"{mock}", "output/runs", run_id, "dada2/ASV_table.tsv.gz")
     summary_file = os.path.join(result_dir, f"{mock}", "output/runs", run_id, "overall_summary.tsv")
 
-    mock_dir = mock.replace("mock", "mock-")
-
-    true_comp_path = os.path.join(data_dir, mock_dir, true_comp_file)
+    if mock.startswith("mock"):
+        mock_dir = mock.replace("mock", "mock-")
+        true_comp_path = os.path.join(data_dir, "mockrobiota", mock_dir, true_comp_file)
+    else:
+        true_comp_path = os.path.join(data_dir, mock, true_comp_file)
 
     asv_tax = pd.read_csv(asv_tax_file, sep='\t')
     asv_table = pd.read_csv(asv_table_file, sep='\t')

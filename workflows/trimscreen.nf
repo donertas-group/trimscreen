@@ -14,15 +14,12 @@ include { WRITE_AMPLISEQ_COMMAND                                    } from '../m
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-
-// This is for new TRIMSCREEN after making detaxizer optional
 workflow TRIMSCREEN {
 
     take:
     ch_samplesheet // channel: samplesheet read in from --input
 
     main:
-
     if (params.enable_filter) {
 
         DETAXIZER_SIMPLIFIED(ch_samplesheet)
@@ -38,21 +35,24 @@ workflow TRIMSCREEN {
         }.flatten().collate(3)
 
         AMPLISEQ_SCREENING (ch_new_samplesheet)
-
-
-       // multiqc_report = AMPLISEQ_SCREENING.out.multiqc_report
+        multiqc_report = AMPLISEQ_SCREENING.out.multiqc_report
 
     } else {
 
         AMPLISEQ_SCREENING (ch_samplesheet)
-
-        //multiqc_report = AMPLISEQ_SCREENING.out.multiqc_report
+        multiqc_report = AMPLISEQ_SCREENING.out.multiqc_report
     }
     
     best_run = AMPLISEQ_SCREENING.out.best_run
-    WRITE_AMPLISEQ_COMMAND(best_run)
-    //emit:
-    //multiqc_report
+    
+    best_run
+    .ifEmpty { Channel.empty() }
+    | WRITE_AMPLISEQ_COMMAND
+
+//        WRITE_AMPLISEQ_COMMAND(best_run)
+
+    emit:
+    multiqc_report
 }
 
 

@@ -259,7 +259,7 @@ include { QIIME2_ANCOM                  } from '../../../subworkflows/ampliseq/q
 // FUNCTIONS
 //
 //include { samplesheetToList      } from '../../plugin/nf-schema'
-//include { paramsSummaryMap       } from '../../plugin/nf-schema'
+include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../../../subworkflows/local/ampliseq/utils_nfcore_ampliseq_pipeline'
@@ -348,7 +348,7 @@ workflow AMPLISEQ_SIMPLIFIED {
 
     RENAME_RAW_DATA_FILES ( ch_reads )
     ch_versions = ch_versions.mix(RENAME_RAW_DATA_FILES.out.versions.first())
-/*
+
     //
     // MODULE: Run FastQC
     //
@@ -357,7 +357,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
         ch_versions = ch_versions.mix(FASTQC.out.versions.first())
     }
-*/
+
     //
     // MODULE: Cutadapt
     //
@@ -981,15 +981,6 @@ workflow AMPLISEQ_SIMPLIFIED {
 
 
 
-
-
-
-
-
-
-
-
-
     //
     // Collate and save software versions
     //
@@ -1002,7 +993,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         ).set { ch_collated_versions }
 
     ch_multiqc_report_list = Channel.empty()
-/*
+
     //
     // MODULE: MultiQC
     //
@@ -1049,7 +1040,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     } else {
         ch_multiqc_report_list = Channel.empty()
     }
-*/
+
     ch_multiqc_report_list = Channel.empty()
 
 /*

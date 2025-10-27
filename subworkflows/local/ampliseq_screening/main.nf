@@ -18,7 +18,6 @@ if (params.metadata) {
 } else { ch_metadata = Channel.empty() }
 
 
-
 workflow AMPLISEQ_SCREENING {
     take:
     ch_samplesheet
@@ -68,7 +67,6 @@ workflow AMPLISEQ_SCREENING {
         .unique()
 
     subset_samples = params.subset_samples ?: false
-
 
     // restrict to samples only
     if (params.metadata) {
@@ -128,11 +126,9 @@ workflow AMPLISEQ_SCREENING {
     // Run simplified version of ampliseq
     AMPLISEQ_SIMPLIFIED(ch_samplesheet_subset, ch_params)
 
-
-
  
     //
-    // SUBWORKFLOW: Compare runs (moved from AMPLISEQ_SIMPLIFIED)
+    // SUBWORKFLOW: Compare runs 
     //
     if (!params.skip_run_comparison) {
         COMPARE_RUNS ( 
@@ -161,25 +157,26 @@ workflow AMPLISEQ_SCREENING {
             .map { runID, meta, file, _ -> [meta, file] }
             .set { ch_best_fasta }
 
-
     } else {
         // If comparison is skipped, output all runs
         ch_best_tsv = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
         ch_best_fasta = AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
+        ch_best_run = Channel.empty()
     }
 
 
+    //
+    //
+    //
 
-
-    if (!params.subset_samples && params.publish_all_runs) { 
+    if (!params.skip_run_comparison && !params.subset_samples && params.publish_all_runs) { 
 
         // Create links to best runs
         ch_best_tsv.collect().map { it[0] }
             .set { ch_best_for_link }
         CREATE_LINK ( ch_best_for_link )
 
-
-    } else {
+    } else if (!params.skip_run_comparison) {
 
         // Create updated metadata channel with is_best_run = true for best runs
         ch_best_run_annotated = ch_best_run
@@ -196,23 +193,21 @@ workflow AMPLISEQ_SCREENING {
         ch_best_tsv = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_table
         ch_best_fasta = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_fasta
     
-
     }
-
-
-
 
 
 
     emit:
     best_run         = ch_best_run
-    /*runs_summary     = AMPLISEQ_SIMPLIFIED.out.runs_summary
+    multiqc_report   = AMPLISEQ_SIMPLIFIED.out.multiqc_report
+    versions         = AMPLISEQ_SIMPLIFIED.out.versions
+    /*
+    runs_summary     = AMPLISEQ_SIMPLIFIED.out.runs_summary
     runs_asv_table   = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
     runs_asv_tax     = AMPLISEQ_SIMPLIFIED.out.runs_asv_tax
     best_asv_table   = ch_best_tsv
     best_asv_fasta   = ch_best_fasta
     comparison_results = params.skip_run_comparison ? Channel.empty() : COMPARE_RUNS.out
-    multiqc_report   = AMPLISEQ_SIMPLIFIED.out.multiqc_report
-    versions         = AMPLISEQ_SIMPLIFIED.out.versions*/
+    */
 }
 

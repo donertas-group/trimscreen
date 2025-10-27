@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 # example usage
-# ./driver_compare_w_mock.allruns.py -M 16 -R Genus -X 10 
+# ./driver_compare_w_mock.allruns.py -M mock04 -R Genus -X 10 
 
 def old_run_compare(M, run_id, R, true_file):
     """Call compare_w_mock.py and capture (x, f1) output."""

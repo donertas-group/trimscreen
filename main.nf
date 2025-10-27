@@ -59,13 +59,15 @@ workflow {
     //
     // WORKFLOW: Run main workflow
     //
-    //DONERTASGROUP_TRIMSCREEN (
+
     TRIMSCREEN (
         PIPELINE_INITIALISATION.out.samplesheet
     )
+
     //
     // SUBWORKFLOW: Run completion tasks
     //
+
     /*
     PIPELINE_COMPLETION (
         params.email,

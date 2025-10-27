@@ -7,13 +7,6 @@ process FASTQC {
         'https://depot.galaxyproject.org/singularity/fastqc:0.12.1--hdfd78af_0' :
         'biocontainers/fastqc:0.12.1--hdfd78af_0' }"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/FastQC/${meta.id}",
-        mode: params.publish_dir_mode,
-        pattern: "*.html",
-        enabled: params.save_intermediates && "${meta.is_best_run}"
-
-
-
     input:
     tuple val(meta), path(reads)
 
