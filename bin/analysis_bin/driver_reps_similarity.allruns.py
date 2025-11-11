@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
+
 # example usage
-# ./driver_reps_similarity.allruns.py -D hc227_v3v4 -R Genus 
+# ./driver_reps_similarity.allruns.py -D hc227_v3v4 -R Genus --f1_file f1_scores_hc227_v3v4_Genus_min10.txt
+# choices=["hc227_v3v4","mock13-15","mock03_05","mock20_22","mock21_23","tourlousse2022","schirmer2015"]
+
 import subprocess
 import json
 import argparse
@@ -40,9 +43,10 @@ def run_compare(D, run_id, R):
 def main():
     import pandas as pd
     parser = argparse.ArgumentParser(description="Aggregate compare_w_mock.py results across runs")
-    parser.add_argument("-D", required=True, choices=["hc227_v3v4","mock13-15","mock20_22","mock21_23"], help="Dataset name")
+    parser.add_argument("-D", required=True, choices=["hc227_v3v4","mock13-15","mock03_05","mock20_22","mock21_23","tourlousse2022","schirmer2015"], help="Dataset name")
     parser.add_argument("-R", required=True, help="Taxnomic rank")
     parser.add_argument("--out", default="/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output", help="Output plot filename")
+    parser.add_argument("--f1_file", type=str, required=False, help="txt file listing f1 scores and runIDs")
     args = parser.parse_args()
 
     fu_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.D}/output/compare_runs/full_table.csv"
@@ -53,6 +57,7 @@ def main():
 
     runs = fu_tb['run'].astype(str).unique().tolist()
     runs_filtered = fi_tb['run'].astype(str).unique().tolist()
+    
 
     # Store data for all runs and filtered runs separately
     data_all = []
@@ -64,13 +69,15 @@ def main():
         similarity = run_compare(args.D, run_id, args.R)
         if not similarity:
             continue  # Skip this run safely
+        shannon = fu_tb.loc[fu_tb['run'] == run_id, 'shannon_Genus'].iloc[0]
+        preads = fu_tb.loc[fu_tb['run'] == run_id, 'retained_reads_percent'].iloc[0]
 
         # Extract lenf, lenr from run id (last 6 digits)
         suffix = run_id[-6:]
         lenf, lenr = int(suffix[:3]), int(suffix[3:])
 
         # Add to appropriate dataset
-        record = {"run_id": run_id, "lenf": lenf, "lenr": lenr, "similarity": similarity}
+        record = {"run_id": run_id, "lenf": lenf, "lenr": lenr, "similarity": similarity, "shannon_Genus": shannon, "retained_reads_percent": preads}
         data_all.append(record)
         print(record)
         if run_id in runs_filtered:
@@ -93,7 +100,7 @@ def main():
         c=df_all["similarity"],
         cmap="viridis",
         norm=norm,
-        alpha=0.5,
+        alpha=0.2,
         edgecolor="none",
         label="Dropped"
     )
@@ -124,6 +131,57 @@ def main():
     plt.close()
 
     print(f"Plot saved to {outfile}")
+
+
+    # ---- Merge with f1 file and plot ----
+    if args.f1_file:
+        f1_df = pd.read_csv(os.path.join(args.out, args.f1_file), sep='\t')
+
+        # ensure column names match (case-insensitive check)
+        expected_cols = {"run_id", "f1_score"}
+        if not expected_cols.issubset(f1_df.columns):
+            raise ValueError(f"f1_file must have columns {expected_cols}, but found {f1_df.columns.tolist()}")
+
+        merged = pd.merge(df_all, f1_df, on="run_id", how="inner")
+
+        if merged.empty:
+            print("[WARN] No overlapping run_ids found between df_all and f1_file.")
+        else:
+            xvars = ["shannon_Genus", "retained_reads_percent"] #"similarity", 
+
+            for x_var in xvars:
+                if x_var not in merged.columns:
+                    print(f"[WARN] Column '{x_var}' not found in merged DataFrame. Skipping.")
+                    continue
+
+                plt.figure(figsize=(8, 6))
+                plt.scatter(merged[x_var], merged["f1_score"], alpha=0.2)
+                plt.xlabel(x_var.capitalize().replace("_", " "))
+                plt.ylabel("F1 Score")
+                plt.title(f"{x_var.capitalize()} vs F1 Score ({args.D}, Rank={args.R})")
+                plt.grid(True)
+
+                scatterfile = os.path.join(args.out, f"{x_var}_vs_f1_{args.D}.png")
+                os.makedirs(os.path.dirname(scatterfile), exist_ok=True)
+                plt.savefig(scatterfile, dpi=300, bbox_inches="tight")
+                plt.close()
+
+                print(f"[INFO] Scatter plot saved to {scatterfile}")
+
+#            plt.figure(figsize=(8, 6))
+#            plt.scatter(merged["similarity"], merged["f1_score"], alpha=0.2)
+#            plt.xlabel("Similarity")
+#            plt.ylabel("F1 Score")
+#            plt.title(f"Similarity vs F1 Score ({args.D}, Rank={args.R})")
+#            plt.grid(True)
+
+#            scatterfile = os.path.join(args.out, f"similarity_vs_f1_{args.D}.png")
+#            os.makedirs(os.path.dirname(scatterfile), exist_ok=True)
+#            plt.savefig(scatterfile, dpi=300, bbox_inches="tight")
+#            plt.close()
+#            print(f"[INFO] Scatter plot saved to {scatterfile}")
+
+
 
 if __name__ == "__main__":
     main()

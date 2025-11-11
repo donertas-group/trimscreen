@@ -39,7 +39,10 @@ def calculate_mean_similarity(dataset, run_id, rank):
     merged = pd.merge(asv_table, asv_tax, on='ASV_ID')
 
     # Drop NA or empty rank entries
-    merged = merged[merged[rank].notna() & (merged[rank] != '')]
+    merged = merged[merged[rank].notna() & (merged[rank].astype(str).str.strip() != '')]
+
+    if merged.empty:
+        return None
 
     meta_cols = ["ASV_ID", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species", "confidence","sequence"]
     meta_cols = [c for c in meta_cols if c in merged.columns]

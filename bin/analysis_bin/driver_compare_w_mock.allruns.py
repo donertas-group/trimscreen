@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# example usage
+# ./driver_compare_w_mock.allruns.py -M mock04 -R Genus -X 10 
 import subprocess
 import json
 import argparse
@@ -6,27 +8,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-# example usage
-# ./driver_compare_w_mock.allruns.py -M mock04 -R Genus -X 10 
-
-def old_run_compare(M, run_id, R, true_file):
-    """Call compare_w_mock.py and capture (x, f1) output."""
-    # Run compare_w_mock.py as a subprocess
-    result = subprocess.run(
-        ["./compare_w_mock.py", "-M", M, "-r", run_id, "-R", R, "--true", true_file],
-        capture_output=True,
-        text=True,
-        check=True
-    )
-    # Assume compare_w_mock.py prints JSON like: {"x": [...], "f1": [...]}
-    data = json.loads(result.stdout.strip())
-    return data["x"], data["f1"]
 
 def run_compare(M, run_id, R, true_file):
-    """Call compare_w_mock.py and capture (x, f1) output."""
+    """Call compare_w_true.py and capture (x, f1) output."""
     try:
         result = subprocess.run(
-            ["./compare_w_mock.py", "-M", M, "-r", run_id, "-R", R, "--true", true_file],
+            ["./compare_w_true.py", "-M", M, "-r", run_id, "-R", R, "--true", true_file],
             capture_output=True,
             text=True,
             check=True
@@ -42,7 +29,7 @@ def run_compare(M, run_id, R, true_file):
         return x, f1
 
     except subprocess.CalledProcessError as e:
-        print(f"[ERROR] compare_w_mock.py failed for run {run_id}: {e.stderr.strip()}")
+        print(f"[ERROR] compare_w_true.py failed for run {run_id}: {e.stderr.strip()}")
         return None, None
     except json.JSONDecodeError as e:
         print(f"[ERROR] Invalid JSON output for run {run_id}: {e}")
@@ -52,7 +39,7 @@ def run_compare(M, run_id, R, true_file):
 
 def main():
     import pandas as pd
-    parser = argparse.ArgumentParser(description="Aggregate compare_w_mock.py results across runs")
+    parser = argparse.ArgumentParser(description="Aggregate compare_w_true.py results across runs")
     parser.add_argument("-M", required=True, help="Mock dataset number")
     parser.add_argument("-R", required=True, help="Taxnomic rank")
     parser.add_argument("-X", type=int, required=True, help="Target ASV read number filter value")
@@ -67,14 +54,14 @@ def main():
     fi_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.M}/output/compare_runs/filtered_table.csv"
     fi_tb = pd.read_csv(fi_tb_path)
 
-    runs = fu_tb['run'].astype(str).tolist()
-    runs_filtered = fi_tb['run'].astype(str).tolist()
+    runs = fu_tb['run'].astype(str).unique().tolist()
+    runs_filtered = fi_tb['run'].astype(str).unique().tolist()
 
     # Store data for all runs and filtered runs separately
     data_all = []
     data_filtered = []
 
-    with open(os.path.join(args.out, f"f1_scores_mock{args.M}_{args.R}_min{args.X}.txt"), "w") as f:
+    with open(os.path.join(args.out, f"f1_scores_{args.M}_{args.R}_min{args.X}.txt"), "w") as f:
         # add header
         f.write("run_id\ttrunclenf\ttrunclenr\tasv_abund_threshold\tf1_score\n")
 
@@ -153,7 +140,7 @@ def main():
     plt.legend()
 
     # Save plot
-    outfile = os.path.join(args.out, f"f1_scatter_mock{args.M}_{args.R}_min{args.X}.png")
+    outfile = os.path.join(args.out, f"f1_scatter_{args.M}_{args.R}_min{args.X}.png")
     plt.savefig(outfile, dpi=300)
     plt.close()
 

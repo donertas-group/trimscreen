@@ -3,8 +3,9 @@
 # The script expects the input files in a structured directory, as described.
 # It uses read count as the x-axis and calculates detection stats and f1 summary score at the user-specified taxonomic rank.
 # Make sure column names match exactly, especially for ranks (Genus, Family, etc.) — they are case-sensitive.
+
 # example usage:
-# ./compare_w_mock.py -M mock13 -r run_180190 -R Genus --true true_composition.csv
+# ./compare_w_true.py -M mock13 -r run_180190 -R Genus --true true_composition.csv
 
 import argparse
 import pandas as pd

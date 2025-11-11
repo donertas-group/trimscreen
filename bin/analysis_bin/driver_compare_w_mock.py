@@ -11,10 +11,10 @@ import os
 
 
 def run_compare(M, run_id, R, true_file):
-    """Call compare_w_mock.py and capture (x, f1) output."""
+    """Call compare_w_true.py and capture (x, f1) output."""
     # Run compare_w_mock.py as a subprocess
     result = subprocess.run(
-        ["./compare_w_mock.py", "-M", M, "-r", run_id, "-R", R, "--true", true_file],
+        ["./compare_w_true.py", "-M", M, "-r", run_id, "-R", R, "--true", true_file],
         capture_output=True,
         text=True,
         check=True
@@ -35,7 +35,7 @@ def main():
 
     lenf_vals, lenr_vals, f1_vals = [], [], []
 
-    with open(os.path.join(args.out, f"f1_scores_mock{args.M}_{args.R}_min{args.X}.txt"), "w") as f:
+    with open(os.path.join(args.out, f"f1_scores_{args.M}_{args.R}_min{args.X}.txt"), "w") as f:
         # add header
         f.write("run_id\ttrunclenf\ttrunclenr\tasv_abund_threshold\tf1_score\n")
 
@@ -71,9 +71,9 @@ def main():
     plt.colorbar(label=f"f1 score at {args.R}")
     plt.xlabel("Forward read length")
     plt.ylabel("Reverse read length")
-    plt.title(f"Mock {args.M}, min {args.X} reads/ASV")
+    plt.title(f"{args.M}, min {args.X} reads/ASV")
 
-    outfile = os.path.join(args.out, f"f1_scatter_mock{args.M}_{args.R}_min{args.X}.rarefied.png")
+    outfile = os.path.join(args.out, f"f1_scatter_{args.M}_{args.R}_min{args.X}.rarefied.png")
     plt.savefig(outfile, dpi=300)
 
 if __name__ == "__main__":
