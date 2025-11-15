@@ -52,14 +52,15 @@ def process_run(summary_file, asv_file, tax_file, run, classifier_dir, ranks):
         ntaxa = []
         nasvs = []
         shannons = []
-
+        simpsons = []
+ 
         # Iterate through each sample column
         for sample in asv_table.columns.tolist():
             # Filter for ASVs with counts > 0 and corresponding taxonomic name not NaN
             valid_asvs = merged_table[(merged_table[sample] > 0) & (merged_table[rank].notna())]
             nasvs.append(valid_asvs[sample].count())
 
-            # Calculate richness and shannon diversity at unique taxonomic identities
+            # Calculate richness and alpha diversity at unique taxonomic identities
             unique_count = valid_asvs[rank].nunique()
             ntaxa.append(unique_count)
 
@@ -70,10 +71,15 @@ def process_run(summary_file, asv_file, tax_file, run, classifier_dir, ranks):
             shannon = diversity.alpha.shannon(rank_nasvs)
             shannons.append(shannon)
 
+            simpson = diversity.alpha.simpson(rank_nasvs)
+            simpsons.append(simpson)
+
         # Store the counts in the results dictionary
         results[rank] = ntaxa
         results[f'{rank}_nasv'] = nasvs
         results[f'shannon_{rank}'] = shannons
+        results[f'simpson_{rank}'] = simpsons
+        
 
     Nasvs = []
     Nreads = []
@@ -100,6 +106,9 @@ def process_run(summary_file, asv_file, tax_file, run, classifier_dir, ranks):
     for rank in ranks:
         #res_df[f'{rank}_pread'] = res_df[f'{rank}_nread'] / res_df['input_tax_filter'].replace(0, np.nan)
         res_df[f'{rank}_pasv'] = res_df[f'{rank}_nasv'] / res_df['nasvs'].replace(0, np.nan)
+    
+    # reorder columns
+    res_df = res_df[['sample', 'run'] + [c for c in res_df.columns if c not in ['sample', 'run']]]
 
     return res_df
 
