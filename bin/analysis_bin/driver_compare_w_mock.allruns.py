@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # example usage
-# ./driver_compare_w_mock.allruns.py -M mock04 -R Genus -X 10 
+# ./driver_compare_w_mock.allruns.py -M mock13-15 -R Genus --true /scratch/shire/data/nj/raw_data/published/mockrobiota/mock-13/true_composition_mock_13_14_15.csv
 import subprocess
 import json
 import argparse
@@ -20,21 +20,21 @@ def run_compare(M, run_id, R, true_file):
         )
         # Try to parse JSON
         data = json.loads(result.stdout.strip())
-        x = data.get("x", [])
+#        x = data.get("x", [])
         f1 = data.get("f1", [])
         # Validate the content
-        if not isinstance(x, list) or not isinstance(f1, list) or len(x) == 0 or len(f1) == 0:
-            print(f"[WARN] Empty or invalid output for run {run_id}. Skipping.")
-            return None, None
-        return x, f1
+   #     if not isinstance(f1, float):
+   #         print(f"[WARN] Empty or invalid output for run {run_id}. Skipping.")
+   #         return None
+        return f1
 
     except subprocess.CalledProcessError as e:
         print(f"[ERROR] compare_w_true.py failed for run {run_id}: {e.stderr.strip()}")
-        return None, None
+        return None
     except json.JSONDecodeError as e:
         print(f"[ERROR] Invalid JSON output for run {run_id}: {e}")
         print("Raw output was:", result.stdout.strip())
-        return None, None
+        return None
 
 
 def main():
@@ -42,7 +42,7 @@ def main():
     parser = argparse.ArgumentParser(description="Aggregate compare_w_true.py results across runs")
     parser.add_argument("-M", required=True, help="Mock dataset number")
     parser.add_argument("-R", required=True, help="Taxnomic rank")
-    parser.add_argument("-X", type=int, required=True, help="Target ASV read number filter value")
+    #parser.add_argument("-X", type=int, required=True, help="Target ASV read number filter value")
     parser.add_argument("--true", default="true_composition.csv", help="true_composition.csv file")
     #parser.add_argument("--runs", nargs="+", required=True, help="List of run IDs (e.g. run_123456)")
     parser.add_argument("--out", default="/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output", help="Output plot filename")
@@ -61,35 +61,24 @@ def main():
     data_all = []
     data_filtered = []
 
-    with open(os.path.join(args.out, f"f1_scores_{args.M}_{args.R}_min{args.X}.txt"), "w") as f:
+    with open(os.path.join(args.out, f"f1_scores_{args.M}_{args.R}.txt"), "w") as f:
         # add header
         f.write("run_id\ttrunclenf\ttrunclenr\tasv_abund_threshold\tf1_score\n")
 
         for run_id in runs:
-            x, f1 = run_compare(args.M, run_id, args.R, args.true)
-            if not x or not f1:
+            f1 = run_compare(args.M, run_id, args.R, args.true)
+            if not f1:
                 continue  # Skip this run safely
-
-            # Find index of closest and no smaller value to X
-            idx = int(np.argmin([abs(val - args.X) for val in x]))
-            x = np.array(x)
-            mask = x >= args.X
-            if np.any(mask):
-                idx = np.where(mask)[0][np.argmin(x[mask] - args.X)]
-            else:
-                continue
-
-            x_prime, f1_prime = x[idx], f1[idx]
-
+            print(f1)
             # Extract lenf, lenr from run id (last 6 digits)
             suffix = run_id[-6:]
             lenf, lenr = int(suffix[:3]), int(suffix[3:])
 
             # Save results
-            f.write(f"{run_id}\t{lenf}\t{lenr}\t{x_prime}\t{f1_prime}\n")
+            f.write(f"{run_id}\t{lenf}\t{lenr}\t{f1}\n")
 
             # Add to appropriate dataset
-            record = {"run_id": run_id, "lenf": lenf, "lenr": lenr, "f1": f1_prime}
+            record = {"run_id": run_id, "lenf": lenf, "lenr": lenr, "f1": f1}
             data_all.append(record)
             if run_id in runs_filtered:
                 data_filtered.append(record)
@@ -136,11 +125,11 @@ def main():
     plt.colorbar(label=f"F1 score at {args.R}")
     plt.xlabel("Forward read length")
     plt.ylabel("Reverse read length")
-    plt.title(f"Mock {args.M}, min {args.X} reads/ASV")
+    plt.title(f"Mock {args.M}")
     plt.legend()
 
     # Save plot
-    outfile = os.path.join(args.out, f"f1_scatter_{args.M}_{args.R}_min{args.X}.png")
+    outfile = os.path.join(args.out, f"f1_scatter_{args.M}_{args.R}.png")
     plt.savefig(outfile, dpi=300)
     plt.close()
 

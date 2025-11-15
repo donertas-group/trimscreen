@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # example usage
-# ./driver_reps_similarity.allruns.py -D hc227_v3v4 -R Genus --f1_file f1_scores_hc227_v3v4_Genus_min10.txt
+# ./driver_reps_similarity.allruns.py -D hc227_v3v4 -R Genus --f1_file f1_scores_hc227_v3v4_Genus_min10.txt --median_distance_file median_distances_per_sample.hc227_v3v4.csv
 # choices=["hc227_v3v4","mock13-15","mock03_05","mock20_22","mock21_23","tourlousse2022","schirmer2015"]
 
 import subprocess
@@ -47,6 +47,7 @@ def main():
     parser.add_argument("-R", required=True, help="Taxnomic rank")
     parser.add_argument("--out", default="/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output", help="Output plot filename")
     parser.add_argument("--f1_file", type=str, required=False, help="txt file listing f1 scores and runIDs")
+    parser.add_argument("--median_distance_file", type=str, required=False, help="csv file listing median distances and runIDs")
     args = parser.parse_args()
 
     fu_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.D}/output/compare_runs/full_table.csv"
@@ -134,20 +135,26 @@ def main():
 
 
     # ---- Merge with f1 file and plot ----
-    if args.f1_file:
+    if args.f1_file and args.median_distance_file:
         f1_df = pd.read_csv(os.path.join(args.out, args.f1_file), sep='\t')
+        med_dist = pd.read_csv(os.path.join(args.out, args.median_distance_file))
 
         # ensure column names match (case-insensitive check)
-        expected_cols = {"run_id", "f1_score"}
-        if not expected_cols.issubset(f1_df.columns):
-            raise ValueError(f"f1_file must have columns {expected_cols}, but found {f1_df.columns.tolist()}")
+        expected_cols1 = {"run_id", "f1_score"}
+        if not expected_cols1.issubset(f1_df.columns):
+            raise ValueError(f"f1_file must have columns {expected_cols1}, but found {f1_df.columns.tolist()}")
+
+        expected_cols2 = {"run_id", "median_distance"}
+        if not expected_cols2.issubset(med_dist.columns):
+            raise ValueError(f"f1_file must have columns {expected_cols2}, but found {med_dist.columns.tolist()}")
 
         merged = pd.merge(df_all, f1_df, on="run_id", how="inner")
+        merged = pd.merge(merged, med_dist, on="run_id", how="inner")
 
         if merged.empty:
             print("[WARN] No overlapping run_ids found between df_all and f1_file.")
         else:
-            xvars = ["shannon_Genus", "retained_reads_percent"] #"similarity", 
+            xvars = ["shannon_Genus", "retained_reads_percent", "similarity", "median_distance"]
 
             for x_var in xvars:
                 if x_var not in merged.columns:
