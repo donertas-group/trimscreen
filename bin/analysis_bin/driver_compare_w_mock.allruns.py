@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # example usage
+# ./driver_compare_w_mock.allruns.py -M schirmer2015 --out_suffix .2 
 # ./driver_compare_w_mock.allruns.py -M mock13-15 -R Genus --true /scratch/shire/data/nj/raw_data/published/mockrobiota/mock-13/true_composition_mock_13_14_15.csv
 import subprocess
 import json
@@ -9,49 +10,44 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 
-def run_compare(M, run_id, R, true_file):
-    """Call compare_w_true.py and capture (x, f1) output."""
+def run_compare(M, run_id, R, out_suffix, true_file):
+    """Call _compare_w_true.py and capture (x, f1) output."""
     try:
         result = subprocess.run(
-            ["./compare_w_true.py", "-M", M, "-r", run_id, "-R", R, "--true", true_file],
+            ["./_compare_w_true.py", "-M", M, "-r", run_id, "-R", R, "--out_suffix", out_suffix, "--true", true_file],
             capture_output=True,
             text=True,
             check=True
         )
         # Try to parse JSON
         data = json.loads(result.stdout.strip())
-#        x = data.get("x", [])
         f1 = data.get("f1", [])
-        # Validate the content
-   #     if not isinstance(f1, float):
-   #         print(f"[WARN] Empty or invalid output for run {run_id}. Skipping.")
-   #         return None
-        return f1
+        f1_mean = data.get("f1_mean", [])
+        return f1, f1_mean
 
     except subprocess.CalledProcessError as e:
-        print(f"[ERROR] compare_w_true.py failed for run {run_id}: {e.stderr.strip()}")
-        return None
+        print(f"[ERROR] _compare_w_true.py failed for run {run_id}: {e.stderr.strip()}")
+        return None, None
     except json.JSONDecodeError as e:
         print(f"[ERROR] Invalid JSON output for run {run_id}: {e}")
         print("Raw output was:", result.stdout.strip())
-        return None
+        return None, None
 
 
 def main():
     import pandas as pd
-    parser = argparse.ArgumentParser(description="Aggregate compare_w_true.py results across runs")
+    parser = argparse.ArgumentParser(description="Aggregate _compare_w_true.py results across runs")
     parser.add_argument("-M", required=True, help="Mock dataset number")
-    parser.add_argument("-R", required=True, help="Taxnomic rank")
-    #parser.add_argument("-X", type=int, required=True, help="Target ASV read number filter value")
+    parser.add_argument("-R", default="Genus", help="Taxnomic rank")
     parser.add_argument("--true", default="true_composition.csv", help="true_composition.csv file")
-    #parser.add_argument("--runs", nargs="+", required=True, help="List of run IDs (e.g. run_123456)")
     parser.add_argument("--out", default="/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output", help="Output plot filename")
+    parser.add_argument("--out_suffix", default="", help="suffix string of pipeline output dir")
     args = parser.parse_args()
 
-    fu_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.M}/output/compare_runs/full_table.csv"
+    fu_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.M}/output{args.out_suffix}/compare_runs/full_table.csv"
     fu_tb = pd.read_csv(fu_tb_path)
     
-    fi_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.M}/output/compare_runs/filtered_table.csv"
+    fi_tb_path = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.M}/output{args.out_suffix}/compare_runs/filtered_table.csv"
     fi_tb = pd.read_csv(fi_tb_path)
 
     runs = fu_tb['run'].astype(str).unique().tolist()
@@ -61,12 +57,14 @@ def main():
     data_all = []
     data_filtered = []
 
-    with open(os.path.join(args.out, f"f1_scores_{args.M}_{args.R}.txt"), "w") as f:
+    f1_filename = f"f1_scores_{args.M}{args.out_suffix}_{args.R}.txt"
+
+    with open(os.path.join(args.out, f1_filename), "w") as f:
         # add header
-        f.write("run_id\ttrunclenf\ttrunclenr\tasv_abund_threshold\tf1_score\n")
+        f.write("run_id\ttrunclenf\ttrunclenr\tf1_score\tf1_score_mean\n")
 
         for run_id in runs:
-            f1 = run_compare(args.M, run_id, args.R, args.true)
+            f1, f1_mean = run_compare(args.M, run_id, args.R, args.out_suffix, args.true)
             if not f1:
                 continue  # Skip this run safely
             print(f1)
@@ -75,15 +73,16 @@ def main():
             lenf, lenr = int(suffix[:3]), int(suffix[3:])
 
             # Save results
-            f.write(f"{run_id}\t{lenf}\t{lenr}\t{f1}\n")
+            f.write(f"{run_id}\t{lenf}\t{lenr}\t{f1}\t{f1_mean}\n")
 
-            # Add to appropriate dataset
-            record = {"run_id": run_id, "lenf": lenf, "lenr": lenr, "f1": f1}
+            # Add to appropriate dataset for plotting
+            record = {"run_id": run_id, "lenf": lenf, "lenr": lenr, "f1": f1, "f1_mean": f1_mean}
             data_all.append(record)
+
             if run_id in runs_filtered:
                 data_filtered.append(record)
 
-    print(f"All results saved to {os.path.join(args.out, 'f1_scores.txt')}")
+    print(f"All results saved to {os.path.join(args.out, f1_filename)}")
 
     # --- Prepare data for plotting ---
     import pandas as pd
@@ -129,7 +128,7 @@ def main():
     plt.legend()
 
     # Save plot
-    outfile = os.path.join(args.out, f"f1_scatter_{args.M}_{args.R}.png")
+    outfile = os.path.join(args.out, f"f1_scatter_{args.M}{args.out_suffix}_{args.R}.png")
     plt.savefig(outfile, dpi=300)
     plt.close()
 

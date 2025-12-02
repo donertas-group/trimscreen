@@ -20,16 +20,17 @@ def parse_args():
     parser.add_argument("-r", "--run", required=True, type=str, help="Run ID")
     parser.add_argument("-R", "--rank", required=True, type=str, help="Taxonomic rank to compare (e.g., Genus)")
     parser.add_argument("--true", default="true_composition.csv", type=str, help="Path to true composition CSV file (full path or filename)")
+    parser.add_argument("--out_suffix", default="", help="suffix string of pipeline output dir")
     parser.add_argument("-X", default=10, type=int, help="Target ASV read number filter value")
     return parser.parse_args()
 
-def read_files(mock, run_id, true_comp_file, threshold):
+def read_files(mock, run_id, true_comp_file, threshold, out_suffix=""):
     result_dir = "/scratch/shire/ssd/pipeline/16s_nf_pipeline"  # Modify if needed
     data_dir = "/scratch/shire/data/nj/raw_data/published"  # Modify if needed
 
-    asv_tax_file = os.path.join(result_dir, f"{mock}", "output/runs", run_id, "dada2/ASV_tax.silva_138_2.tsv.gz")
-    asv_table_file = os.path.join(result_dir, f"{mock}", "output/runs", run_id, "dada2/ASV_table.tsv.gz")
-    summary_file = os.path.join(result_dir, f"{mock}", "output/runs", run_id, "overall_summary.tsv")
+    asv_tax_file = os.path.join(result_dir, f"{mock}", f"output{out_suffix}/runs", run_id, "dada2/ASV_tax.silva_138_2.tsv.gz")
+    asv_table_file = os.path.join(result_dir, f"{mock}", f"output{out_suffix}/runs", run_id, "dada2/ASV_table.tsv.gz")
+    summary_file = os.path.join(result_dir, f"{mock}", f"output{out_suffix}/runs", run_id, "overall_summary.tsv")
 
     # If user provided a full path, use it directly
     if os.path.isabs(true_comp_file):
@@ -37,8 +38,7 @@ def read_files(mock, run_id, true_comp_file, threshold):
     else:
         # Otherwise use existing automatic directory structure
         if mock.startswith("mock"):
-            mock_dir = mock.replace("mock", "mock-")
-            true_comp_path = os.path.join(data_dir, "mockrobiota", mock_dir, true_comp_file)
+            true_comp_path = os.path.join(data_dir, "mockrobiota", mock, true_comp_file)
         else:
             true_comp_path = os.path.join(data_dir, mock, true_comp_file)
 
@@ -120,7 +120,7 @@ def evaluate_detection(taxon_reads, true_taxa):
 
 def main():
     args = parse_args()
-    asv_tax, asv_table, true_comp, summary_table = read_files(args.mock, args.run, args.true, args.X)
+    asv_tax, asv_table, true_comp, summary_table = read_files(args.mock, args.run, args.true, args.X, args.out_suffix)
     
     sample_names = asv_table.columns[1:]
     f1_means = []
@@ -131,10 +131,10 @@ def main():
         if len(f1_scores) > 0:
             f1_means.append(f1_scores[-1])  # last F1 = full detection summary
 
+    f1 = f1_means[0] if f1_means else 0
     avg_f1 = sum(f1_means) / len(f1_means) if f1_means else 0
 
-    output = {"f1": avg_f1}
-   # output2 = {"nreads": int(nreads_nonchim)}
+    output = {"f1": f1, "f1_mean": avg_f1}
     print(json.dumps(output))
 
 if __name__ == "__main__":

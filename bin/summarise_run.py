@@ -108,7 +108,7 @@ def process_run(summary_file, asv_file, tax_file, run, classifier_dir, ranks):
         res_df[f'{rank}_pasv'] = res_df[f'{rank}_nasv'] / res_df['nasvs'].replace(0, np.nan)
     
     # reorder columns
-    res_df = res_df[['sample', 'run'] + [c for c in res_df.columns if c not in ['sample', 'run']]]
+    #res_df = res_df[['sample', 'run'] + [c for c in res_df.columns if c not in ['sample', 'run']]]
 
     return res_df
 

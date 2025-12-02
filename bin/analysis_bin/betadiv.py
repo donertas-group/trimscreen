@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # example usage:
-# ./betadiv.py -D mock16 -R Genus
+# ./betadiv.py -D mock16 
+# ./betadiv.py -D schirmer2015 --out_suffix .2
 
 import os
 import re
@@ -13,7 +14,8 @@ import sys
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Calculate beta-diversity for mock dataset (per-sample, per-run)")
     parser.add_argument("-D", "--dataset_name", required=True, help="Dataset name")
-    parser.add_argument("-R", "--rank", required=True, help="Taxonomic rank to calculate beta")
+    parser.add_argument("-R", "--rank", default="Genus", help="Taxonomic rank to calculate beta")
+    parser.add_argument("--out_suffix", default="", help="suffix string of pipeline output dir")
     parser.add_argument("--out", default="/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output", help="Output dir")
 
     return parser.parse_args()
@@ -31,7 +33,7 @@ def main():
     args = parse_args()
     rank = args.rank
 
-    base_dir = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.dataset_name}/output"
+    base_dir = f"/scratch/shire/ssd/pipeline/16s_nf_pipeline/{args.dataset_name}/output{args.out_suffix}"
     compare_runs_csv = os.path.join(base_dir, "compare_runs", "full_table.csv")
 
     # 1. Get run list
@@ -111,7 +113,7 @@ def main():
     all_dists = pd.concat(results, ignore_index=True)
 
     # Save all pairwise per-sample distances
-    all_outfile = os.path.join(args.out, f"ruzicka_per_sample.{args.dataset_name}.csv")
+    all_outfile = os.path.join(args.out, f"ruzicka_per_sample.{args.dataset_name}{args.out_suffix}.csv")
     all_dists.to_csv(all_outfile, index=False)
     print(f"Per-sample Ruzicka distances saved to: {all_outfile}")
 
@@ -126,7 +128,7 @@ def main():
         run_scores.append({"run_id": run, "median_distance": median_val})
 
     median_df = pd.DataFrame(run_scores)
-    median_outfile = os.path.join(args.out, f"median_distances_per_sample.{args.dataset_name}.csv")
+    median_outfile = os.path.join(args.out, f"median_distances_per_sample.{args.dataset_name}{args.out_suffix}.csv")
     median_df.to_csv(median_outfile, index=False)
     print(f"Median per-run distances saved to: {median_outfile}")
 

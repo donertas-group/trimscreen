@@ -16,6 +16,8 @@ def parse_args():
     parser.add_argument("-D", "--dataset", required=True, type=str, help="Dataset name")
     parser.add_argument("-r", "--run", required=True, type=str, help="Run ID")
     parser.add_argument("-R", "--rank", required=True, type=str, help="Taxonomic rank to compare (e.g., Genus)")
+    parser.add_argument("--out_suffix", default="", help="suffix string of pipeline output dir")
+
     return parser.parse_args()
 
 def ruzicka(u, v):
@@ -27,11 +29,11 @@ def ruzicka(u, v):
         return 0.0
     return 1-(numerator / denominator)
 
-def calculate_mean_similarity(dataset, run_id, rank):
+def calculate_mean_similarity(dataset, run_id, rank, out_suffix=""):
     result_dir = "/scratch/shire/ssd/pipeline/16s_nf_pipeline"  # Modify if needed
 
-    asv_tax_file = os.path.join(result_dir, f"{dataset}", "output/runs", run_id, "dada2/ASV_tax.silva_138_2.tsv.gz")
-    asv_table_file = os.path.join(result_dir, f"{dataset}", "output/runs", run_id, "dada2/ASV_table.tsv.gz")
+    asv_tax_file = os.path.join(result_dir, f"{dataset}", f"output{out_suffix}/runs", run_id, "dada2/ASV_tax.silva_138_2.tsv.gz")
+    asv_table_file = os.path.join(result_dir, f"{dataset}", f"output{out_suffix}/runs", run_id, "dada2/ASV_table.tsv.gz")
 
     asv_tax = pd.read_csv(asv_tax_file, sep='\t')
     asv_table = pd.read_csv(asv_table_file, sep='\t')
@@ -49,6 +51,10 @@ def calculate_mean_similarity(dataset, run_id, rank):
 
     # Identify sample columns
     sample_cols = [c for c in merged.columns if c not in meta_cols]
+
+    # After finding sample_cols
+    if len(sample_cols) < 2:
+        return None  # or return 1.0 (perfect similarity), or 0.0
 
     # Aggregate counts at chosen rank
     agg = merged.groupby(rank)[sample_cols].sum()
@@ -69,7 +75,7 @@ def calculate_mean_similarity(dataset, run_id, rank):
 
 def main():
     args = parse_args()
-    similarity = calculate_mean_similarity(args.dataset, args.run, args.rank)
+    similarity = calculate_mean_similarity(args.dataset, args.run, args.rank, args.out_suffix)
     
     output = {"run": args.run, "similarity": similarity}
     print(json.dumps(output))

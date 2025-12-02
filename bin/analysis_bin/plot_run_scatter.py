@@ -15,12 +15,14 @@ def parse_args():
     parser.add_argument("-D", "--dataset", required=True, type=str, help="Dataset directory name (e.g. mock16)")
     parser.add_argument("-C", "--column", required=True, type=str, choices=["retained_reads_percent", "nasvs", "Phylum_pasv", "Family_pasv", "Genus_pasv", "shannon_Genus"],
                         help="Summary metric to visualize (e.g., Genus_pasv)")
+    parser.add_argument("--out_suffix", default="", help="suffix string of pipeline output dir")
+
     return parser.parse_args()
 
 
-def read_files(dataset):
+def read_files(dataset, out_suffix=""):
     result_dir = "/scratch/shire/ssd/pipeline/16s_nf_pipeline"  # Modify if needed
-    base_path = os.path.join(result_dir, dataset, "output/compare_runs")
+    base_path = os.path.join(result_dir, dataset, f"output{out_suffix}/compare_runs")
 
     full_file = os.path.join(base_path, "full_table.csv")
     filtered_file = os.path.join(base_path, "filtered_table.csv")
@@ -158,7 +160,7 @@ def fplot_results(full_table, filtered_table, column, dataset, result_dir):
 
 def main():
     args = parse_args()
-    full_table, filtered_table, result_dir = read_files(args.dataset)
+    full_table, filtered_table, result_dir = read_files(args.dataset, args.out_suffix)
     plot_results(full_table, filtered_table, args.column, args.dataset, result_dir)
 
 
