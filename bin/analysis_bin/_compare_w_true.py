@@ -5,7 +5,7 @@
 # Make sure column names match exactly, especially for ranks (Genus, Family, etc.) — they are case-sensitive.
 
 # example usage:
-# ./compare_w_true.py -M mock13 -r run_180190 -R Genus (--true /path/to/true_composition.csv -X 20)
+# ./compare_w_true.py -D mock13 -r run_180190 -R Genus (--true /path/to/true_composition.csv -X 20)
 
 import argparse
 import pandas as pd
@@ -16,7 +16,7 @@ import json
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Compare 16S data with true mock composition.")
-    parser.add_argument("-M", "--mock", required=True, type=str, help="Mock community (e.g. mock02)")
+    parser.add_argument("-D", "--dataset_name", required=True, type=str, help="Mock community (e.g. mock02)")
     parser.add_argument("-r", "--run", required=True, type=str, help="Run ID")
     parser.add_argument("-R", "--rank", required=True, type=str, help="Taxonomic rank to compare (e.g., Genus)")
     parser.add_argument("--true", default="true_composition.csv", type=str, help="Path to true composition CSV file (full path or filename)")
@@ -120,7 +120,7 @@ def evaluate_detection(taxon_reads, true_taxa):
 
 def main():
     args = parse_args()
-    asv_tax, asv_table, true_comp, summary_table = read_files(args.mock, args.run, args.true, args.X, args.out_suffix)
+    asv_tax, asv_table, true_comp, summary_table = read_files(args.dataset_name, args.run, args.true, args.X, args.out_suffix)
     
     sample_names = asv_table.columns[1:]
     f1_means = []
