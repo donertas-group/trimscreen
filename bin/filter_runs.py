@@ -22,7 +22,7 @@ def find_good_runs(df: pd.DataFrame, columns: List[str]) -> List[str]:
 
     Args:
       df: DataFrame containing at least ['run','sample'] + columns
-      columns: list of column names to apply the procedure to (e.g. ['Genus','Family'])
+      columns: list of column names to apply the procedure to (e.g. ['Genus','Family','Phylum_pasv','Genus_pasv'])
       min_run_samples: only consider runs that have >= this many samples (default 2)
 
     Returns:

@@ -18,6 +18,6 @@ process FILTER_RUNS {
 
     script:
     """
-    filter_runs.py -i $table -c retained_reads_percent Phylum_pasv Genus_pasv
+    filter_runs.py -i $table -c retained_reads_percent 
     """
 }
