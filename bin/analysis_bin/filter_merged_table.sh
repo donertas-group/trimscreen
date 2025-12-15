@@ -7,11 +7,14 @@ outdir="/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output"
 #d="callahan";D="mock12"
 #d="schirmer2015"; D="schirmer2015"
 #d="hc227";D="hc227_v3v4"
-d="kozich";D="mock13-15"
-
+#d="kozich";D="mock13-15"
+#d="bokulich";D="bokulich2015"
+#d="gohl_uneven";D="mock21_23"
+#d="gohl_even";D="mock20_22"
+d="tourlousse2022";D="tourlousse2022"
 
 # Array of numeric suffixes — may be empty
-numbers=() #1 2 4 5 6 7 8 9 11 12 17 18 19 20)
+numbers=(1 2 3 4 5 6 7 8 9) #1 2 4 5 6 7 8 9 11 12 17 18 19 20)
 
 # If the array is empty, we run once with an empty suffix
 if [ ${#numbers[@]} -eq 0 ]; then

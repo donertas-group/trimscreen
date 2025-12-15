@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-numbers=(10 11)
-dataset_name="schirmer2015"
+numbers=(1 2 5 6)
+dataset_name="bokulich2015"
 
 for n in "${numbers[@]}"; do
     s=".${n}"
-    ./driver_compare_w_mock.allruns.py -D "${dataset_name}" --out_suffix "${s}"
+    ./driver_compare_w_mock.allruns.py -D "${dataset_name}" --out_suffix "${s}" --true /scratch/shire/data/nj/raw_data/published/mockrobiota/mock03/true_composition.csv
     ./betadiv.py -D "${dataset_name}" --out_suffix "${s}"
     ./driver_reps_similarity.allruns.py \
         -D "${dataset_name}" \

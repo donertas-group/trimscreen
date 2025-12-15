@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-dataset_name="mock13-15"
+dataset_name="mock03-05"
 
-    ./driver_compare_w_mock.allruns.py -D "${dataset_name}" --true "/scratch/shire/data/nj/raw_data/published/mockrobiota/mock13/true_composition_mock_13_14_15.csv"
+    #./driver_compare_w_mock.allruns.py -D "${dataset_name}" --true "/scratch/shire/data/nj/raw_data/published/mockrobiota/mock03/true_composition.csv"
     ./betadiv.py -D "${dataset_name}" 
     ./driver_reps_similarity.allruns.py \
         -D "${dataset_name}" \
