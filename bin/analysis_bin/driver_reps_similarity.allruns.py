@@ -75,13 +75,14 @@ def main():
         # take metrics from the first sample among the replicates
         shannon = fu_tb.loc[fu_tb['run'] == run_id, 'shannon_Genus'].iloc[0]
         preads = fu_tb.loc[fu_tb['run'] == run_id, 'retained_reads_percent'].iloc[0]
+        nasvs = fu_tb.loc[fu_tb['run'] == run_id, 'nasvs'].iloc[0]
 
         # Extract lenf, lenr from run id (last 6 digits)
         suffix = run_id[-6:]
         lenf, lenr = int(suffix[:3]), int(suffix[3:])
 
         # Add to appropriate dataset
-        record = {"run_id": run_id, "lenf": lenf, "lenr": lenr, "similarity": similarity, "shannon_Genus": shannon, "retained_reads_percent": preads}
+        record = {"run_id": run_id, "lenf": lenf, "lenr": lenr, "retained_reads_percent": preads, "nasvs": nasvs, "similarity": similarity, "shannon_Genus": shannon}
         data_all.append(record)
         print(record)
         if run_id in runs_filtered:
