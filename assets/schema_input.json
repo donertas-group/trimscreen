@@ -9,8 +9,8 @@
         "properties": {
             "sampleID": {
                 "type": "string",
-                "pattern": "^\\S+$",
-                "errorMessage": "Sample name must be provided and cannot contain spaces",
+                "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+                "errorMessage": "Sample ID must start with a letter and contain only letters, numbers, or underscores",
                 "meta": ["id"]
             },
             "forwardReads": {
@@ -28,5 +28,5 @@
             }
         }
     },
-    "required": ["sampleID", "forwardReads", "reverseReads"],
+    "required": ["sampleID", "forwardReads", "reverseReads"]
 }
