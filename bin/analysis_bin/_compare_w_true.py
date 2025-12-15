@@ -127,14 +127,14 @@ def main():
 
     for sample in sample_names:
         taxon_reads, true_taxa = prepare_taxa_sets(asv_tax, asv_table, true_comp, args.rank, sample)
-        _, _, _, _, f1_scores = evaluate_detection(taxon_reads, true_taxa)
+        _, TP, FP, FN, f1_scores = evaluate_detection(taxon_reads, true_taxa)
         if len(f1_scores) > 0:
             f1_means.append(f1_scores[-1])  # last F1 = full detection summary
 
     f1 = f1_means[0] if f1_means else 0
     avg_f1 = sum(f1_means) / len(f1_means) if f1_means else 0
 
-    output = {"f1": f1, "f1_mean": avg_f1}
+    output = {"f1": f1, "f1_mean": avg_f1, "TP": TP[-1], "FP": FP[-1], "FN": FN[-1]}
     print(json.dumps(output))
 
 if __name__ == "__main__":
