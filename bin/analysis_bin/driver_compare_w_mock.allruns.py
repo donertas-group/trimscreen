@@ -25,23 +25,6 @@ def run_compare(D, run_id, R, out_suffix, true_file):
         print(f"[ERROR] run {run_id} failed: {e}")
         return {}
 
-        # Try to parse JSON
-#        data = json.loads(result.stdout.strip())
-#        f1 = data.get("f1", [])
-#        f1_mean = data.get("f1_mean", [])
-#        TP = data.get("TP", [])
-#        FP = data.get("FP", [])
-#        FN = data.get("FN", [])
-#        return f1, f1_mean, TP, FP, FN
-
-#    except subprocess.CalledProcessError as e:
-#        print(f"[ERROR] _compare_w_true.py failed for run {run_id}: {e.stderr.strip()}")
-#        return None, None, None, None, None
-#    except json.JSONDecodeError as e:
-#        print(f"[ERROR] Invalid JSON output for run {run_id}: {e}")
-#        print("Raw output was:", result.stdout.strip())
-#       return None, None, None, None, None
-
 
 def main():
     import pandas as pd
@@ -70,7 +53,7 @@ def main():
 
     with open(os.path.join(args.out, f1_filename), "w") as f:
         # add header
-        f.write("run_id\ttrunclenf\ttrunclenr\tf1_score\tf1_score_mean\n")
+        f.write("run_id\ttrunclenf\ttrunclenr\tf1_score\tf1_score_mean\tTP\tFP\tFN\n")
 
         for run_id in runs:
             data = run_compare(args.D, run_id, args.R, args.out_suffix, args.true)
@@ -88,7 +71,7 @@ def main():
             lenf, lenr = int(suffix[:3]), int(suffix[3:])
 
             # Save results
-            f.write(f"{run_id}\t{lenf}\t{lenr}\t{f1}\t{f1_mean}\n")
+            f.write(f"{run_id}\t{lenf}\t{lenr}\t{f1}\t{f1_mean}\t{TP}\t{FP}\t{FN}\n")
 
             # Add to appropriate dataset for plotting
             record = {"run_id": run_id, "lenf": lenf, "lenr": lenr, "f1": f1, "f1_mean": f1_mean, "TP": TP, "FP": FP, "FN": FN}
