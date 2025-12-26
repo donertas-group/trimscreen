@@ -1,4 +1,4 @@
-process FIND_BEST_RUN {
+process RANK_BASED_OPTIMISATION {
     tag "decide"
     label "process_single"
 
@@ -19,7 +19,7 @@ process FIND_BEST_RUN {
 
     script:
     """
-    find_best_run.py -i $table -m $metadata -t Family Genus
+    rank_based_optimisation.py -i $table -m $metadata -t Family Genus
     """
 
 }
