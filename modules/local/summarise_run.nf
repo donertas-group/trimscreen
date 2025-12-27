@@ -9,7 +9,8 @@ process SUMMARISE_RUN {
 
     input:
     tuple val(meta), path(stats), path(asv), path(tax)
-
+    path metadata
+    
     output:
     tuple val(meta), path("${meta.run}_table.csv"), emit: csv
     path "versions.yml"   , emit: versions
@@ -19,7 +20,7 @@ process SUMMARISE_RUN {
 
     script:
     """
-    summarise_run.py -i $stats $asv $tax ${meta.run} 
+    summarise_run.py -i $stats $asv $tax ${meta.run} -m $metadata
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

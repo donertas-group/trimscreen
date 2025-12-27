@@ -16,7 +16,12 @@ workflow COMPARE_RUNS {
         .combine(runs_asv_tax, by:0)
         .set{ch_run_data}
 
-    SUMMARISE_RUN (ch_run_data)
+    if (params.metadata) {
+        ch_metadata = Channel.fromPath("${params.metadata}", checkIfExists: true)
+    }
+
+    SUMMARISE_RUN (ch_run_data, ch_metadata)
+    
     ch_run_table = SUMMARISE_RUN.out.csv
     
     MERGE_RUN_SUMMARIES (
@@ -55,10 +60,6 @@ workflow COMPARE_RUNS {
     RAREFY_RUNS(ch_runs_to_rarefy)
  
     ASV_table_rarefied = RAREFY_RUNS.out.tsv
-
-    if (params.metadata) {
-    ch_metadata = Channel.fromPath("${params.metadata}", checkIfExists: true)
-    }
 
     filtered_table = FILTER_RUNS.out.filtered
     .map {stdout, csv -> csv} 

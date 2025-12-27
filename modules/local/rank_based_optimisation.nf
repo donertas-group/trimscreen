@@ -19,7 +19,7 @@ process RANK_BASED_OPTIMISATION {
 
     script:
     """
-    rank_based_optimisation.py -i $table -m $metadata -t Family Genus
+    rank_based_optimisation.py -i $table -m $metadata --metrics retained_reads_percent shannon_genus rep_similarity
     """
 
 }
