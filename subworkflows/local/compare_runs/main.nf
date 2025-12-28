@@ -18,7 +18,13 @@ workflow COMPARE_RUNS {
 
     if (params.metadata) {
         ch_metadata = Channel.fromPath("${params.metadata}", checkIfExists: true)
+    } else {
+        ch_metadata = Channel.value(file('NO_FILE'))  // Creates a single-item channel
     }
+
+    ch_run_data
+        .combine(ch_metadata)
+        .set { ch_run_data_with_metadata }
 
     SUMMARISE_RUN (ch_run_data, ch_metadata)
     

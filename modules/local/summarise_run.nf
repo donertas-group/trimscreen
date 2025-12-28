@@ -9,8 +9,8 @@ process SUMMARISE_RUN {
 
     input:
     tuple val(meta), path(stats), path(asv), path(tax)
-    path metadata
-    
+    each path(metadata)
+
     output:
     tuple val(meta), path("${meta.run}_table.csv"), emit: csv
     path "versions.yml"   , emit: versions
@@ -19,13 +19,13 @@ process SUMMARISE_RUN {
     task.ext.when == null || task.ext.when
 
     script:
+    def metadata_arg = metadata.name != 'NO_FILE' ? "-m ${metadata}" : ""
     """
-    summarise_run.py -i $stats $asv $tax ${meta.run} -m $metadata
+    summarise_run.py -i $stats $asv $tax ${meta.run} ${metadata_arg}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python --version | sed 's/Python //g')
-        biopython: \$(python -c "import pkg_resources; print(pkg_resources.get_distribution('biopython').version)")
     END_VERSIONS
     """
 
