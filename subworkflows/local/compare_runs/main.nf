@@ -2,7 +2,7 @@ include { SUMMARISE_RUN                    } from '../../../modules/local/summar
 include { MERGE_RUN_SUMMARIES              } from '../../../modules/local/merge_run_summaries'
 include { FILTER_RUNS                      } from '../../../modules/local/filter_runs'
 include { RAREFY_RUNS                      } from '../../../modules/local/rarefy_runs'
-include { RANK_BASED_OPTIMISATION          } from '../../../modules/local/rank_based_optimisation'
+include { SCORE_BASED_OPTIMISATION          } from '../../../modules/local/score_based_optimisation'
 
 workflow COMPARE_RUNS {
     take:
@@ -69,9 +69,9 @@ workflow COMPARE_RUNS {
 
     filtered_table = FILTER_RUNS.out.filtered
     .map {stdout, csv -> csv} 
-    RANK_BASED_OPTIMISATION (filtered_table, ch_metadata)
+    SCORE_BASED_OPTIMISATION (filtered_table, ch_metadata)
 
     emit:
-    best_runs = RANK_BASED_OPTIMISATION.out
+    best_runs = SCORE_BASED_OPTIMISATION.out
 
 }

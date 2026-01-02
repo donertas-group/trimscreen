@@ -1,4 +1,4 @@
-process RANK_BASED_OPTIMISATION {
+process SCORE_BASED_OPTIMISATION {
     tag "decide"
     label "process_single"
 
@@ -19,7 +19,7 @@ process RANK_BASED_OPTIMISATION {
 
     script:
     """
-    rank_based_optimisation.py -i $table -m $metadata --metrics retained_reads_percent shannon_Genus rep_similarity
+    score_based_optimisation.py -i $table -m $metadata --metrics retained_reads_percent shannon_Genus rep_similarity --metric_directions + + + --metric_weights 1 1 1
     """
 
 }
