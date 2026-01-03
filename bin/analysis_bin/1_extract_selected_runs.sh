@@ -20,6 +20,5 @@ done <<EOF
 hc227	/scratch/shire/ssd/pipeline/16s_nf_pipeline/hc227_v3v4/output/compare_runs/report.txt
 bokulich_b3_even	/scratch/shire/ssd/pipeline/16s_nf_pipeline/bokulich2015/output.1/compare_runs/report.txt
 kozich	/scratch/shire/ssd/pipeline/16s_nf_pipeline/mock13-15/output/compare_runs/report.txt
-# ...
 EOF
 
