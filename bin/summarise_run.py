@@ -7,7 +7,7 @@ import numpy as np
 import os
 from skbio import diversity
 from scipy.spatial.distance import pdist, squareform
-
+import logging
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(
@@ -95,7 +95,7 @@ def process_run(
         asv_table = pd.read_csv(asv_file, sep="\t", index_col=0)
         summary_table = pd.read_csv(summary_file, sep="\t", index_col=0)
     else:
-        print(
+        logging.warning(
             f"{classifier_dir}, ASV_table.tsv.gz, ASV_tax_*.tsv.gz "
             f"or overall_summary.tsv.gz not found in {run}"
         )
@@ -109,33 +109,33 @@ def process_run(
     # Diversity metrics per rank
     for rank in ranks:
         if rank not in merged_table.columns:
-            print(f"Rank '{rank}' not found in the table. Skipping.")
+            logging.warning(f"Rank '{rank}' not found in the table. Skipping.")
             continue
 
         ntaxa = []
-        nasvs = []
+        nasv = []
         shannons = []
         simpsons = []
 
         for sample in asv_table.columns:
             valid_asvs = merged_table[
-                (merged_table[sample] > 0) & (merged_table[rank].notna())
+                (merged_table[sample] > 0) & (merged_table[rank].notna()) & (merged_table[rank].astype(str).str.strip() != "")
             ]
 
-            nasvs.append(valid_asvs[sample].count())
+            nasv.append(valid_asvs[sample].count())
             ntaxa.append(valid_asvs[rank].nunique())
 
-            rank_nasvs = valid_asvs.groupby(rank)[sample].count()
+            rank_nreads = valid_asvs.groupby(rank)[sample].sum()
 
-            if rank_nasvs.sum() > 0 and len(rank_nasvs) > 1:
-                shannons.append(diversity.alpha.shannon(rank_nasvs))
-                simpsons.append(diversity.alpha.simpson(rank_nasvs))
+            if rank_nreads.sum() > 0 and len(rank_nreads) > 1:
+                shannons.append(np.exp(diversity.alpha.shannon(rank_nreads)))
+                simpsons.append(np.exp(diversity.alpha.simpson(rank_nreads)))
             else:
                 shannons.append(np.nan)
                 simpsons.append(np.nan)
 
         results[rank] = ntaxa
-        results[f"{rank}_nasv"] = nasvs
+        results[f"{rank}_nasv"] = nasv
         results[f"shannon_{rank}"] = shannons
         results[f"simpson_{rank}"] = simpsons
 
@@ -143,27 +143,30 @@ def process_run(
     Nasvs = []
     Nreads = []
 
-    for sample in asv_table.columns:
+    samples = asv_table.columns.unique()
+
+    for sample in samples:
         Nasvs.append(asv_table.loc[asv_table[sample] > 0, sample].count())
         Nreads.append(asv_table.loc[asv_table[sample] > 0, sample].sum())
 
     # Replicate similarity (Genus only, intentional)
     rep_sim = None
-    if len(rep_samples) >= 2:
+
+    replicates = list(set(rep_samples).intersection(samples))
+  
+    if len(replicates) >= 2:
         rep_sim = calculate_mean_similarity(
-            asv_table, asv_tax, run, rep_samples, rank="Genus"
+            asv_table, asv_tax, run, replicates, rank="Genus"
         )
 
     rep_similarity = [
-        rep_sim if sample in rep_samples else None
-        for sample in asv_table.columns
+        rep_sim if sample in replicates else None
+        for sample in samples
     ]
 
     results["nasvs"] = Nasvs
     results["nreads"] = Nreads
-    results["nasvs_in_run"] = (
-        asv_table.count().reindex(asv_table.columns).tolist()
-    )
+    results["nasvs_in_run"] = (asv_table > 0).sum().tolist()
     results["rep_similarity"] = rep_similarity
 
     res_df = pd.DataFrame(results, index=asv_table.columns)
@@ -171,21 +174,17 @@ def process_run(
 
     # Summary table metrics
     if "lenfilter_output" in summary_table.columns:
-        res_df["DADA2_input"] = summary_table["DADA2_input"]
+        res_df["DADA2_input"] = summary_table["DADA2_input"].reindex(res_df.index)
+
         res_df["retained_reads_percent"] = (
-            summary_table["lenfilter_output"]
-            / summary_table["DADA2_input"].replace(0, np.nan)
+            summary_table["lenfilter_output"].reindex(res_df.index)
+            / res_df["DADA2_input"].replace(0, np.nan)
         )
     else:
+        res_df["DADA2_input"] = summary_table["DADA2_input"].reindex(res_df.index)
         res_df["retained_reads_percent"] = (
-            summary_table["nonchim"]
-            / summary_table["DADA2_input"].replace(0, np.nan)
-        )
-
-    for rank in ranks:
-        res_df[f"{rank}_pasv"] = (
-            res_df[f"{rank}_nasv"]
-            / res_df["nasvs"].replace(0, np.nan)
+            summary_table["nonchim"].reindex(res_df.index)
+            / res_df["DADA2_input"].replace(0, np.nan)
         )
 
     # Reorder columns (no 'sample' column; it's the index)
