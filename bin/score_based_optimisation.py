@@ -17,18 +17,8 @@ def parse_args(args=None):
     parser.add_argument("-i", "--input", required=True, help="filtered_table_csv")
     parser.add_argument("-m", "--metadata", required=False, help="Optional metadata tsv table with same format as required by nf-core/ampliseq")
     parser.add_argument("--metrics", required=True, nargs="+", help="Trimming-dependent metrics on which runs are evaluated and ranked")
-    parser.add_argument(
-        "--metric_directions",
-        nargs="+",
-        help="Metric directions: + for higher-is-better, - for lower-is-better",
-    )
-
-    parser.add_argument(
-        "--metric_weights",
-        nargs="+",
-        type=float,
-        help="Optional metric weights (default = 1.0)",
-    )
+    parser.add_argument("--metric_directions", nargs="+", help="Metric directions: + for higher-is-better, - for lower-is-better")
+    parser.add_argument("--metric_weights", nargs="+", type=float, help="Optional metric weights (default = 1.0)")
 
     return parser.parse_args()
 
@@ -42,6 +32,7 @@ def main():
     weights = args.metric_weights
 
     df0 = pd.read_csv(filtered_table_csv)
+    sample_ids = df0['sample'].unique()
 
     # get sampleIDs that are replicates
     rep_samples = None
@@ -53,29 +44,22 @@ def main():
         if not required_cols.issubset(metadata.columns):
             raise ValueError(f"Metadata must contain columns: {required_cols}")
 
-        sample_ids = metadata[metadata['condition'] == 'sample']['sampleID'].unique()
-
-        if len(sample_ids) == 0:
-            raise ValueError("No samples found with condition == 'sample'")
-
         if 'is_replicate' in metadata.columns:
             rep_samples = metadata.loc[
                 metadata['is_replicate'].astype(str).str.lower() == 'true', 'sampleID'
                 ].unique()
-            if len(rep_samples) > 0:
-                df = df0[df0['sample'] == rep_samples[0]]
+
+            replicates = list(set(rep_samples).intersection(sample_ids))
+
+            if len(replicates) > 0:
+                df = df0[df0['sample'] == replicates[0]]
             else:
                 df = df0[df0['sample'] == sample_ids[0]]
         else:
             df = df0[df0['sample'] == sample_ids[0]]
 
     else:
-        sample_ids = df0['sample'].unique()
-        if len(sample_ids) == 0:
-            raise ValueError("No samples found in input table")
-
         df = df0[df0['sample'] == sample_ids[0]]
-
 
     # =========================
     # Score runs by metrics
@@ -111,10 +95,7 @@ def main():
 
     scores["total_score"] = total_score
     best_run = scores.sort_values("total_score", ascending=False).iloc[0]["run"]
-
     print(json.dumps([best_run]))
-
-
 
     # =========================
     # Write scoring report
