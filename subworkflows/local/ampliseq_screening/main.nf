@@ -24,8 +24,8 @@ workflow AMPLISEQ_SCREENING {
     
     main:
     // generate sets of parameters based on input ranges
-    FW_primer_len = params.FW_primer ? params.FW_primer.size() : 0
-    RV_primer_len = params.RV_primer ? params.RV_primer.size() : 0
+    FW_primer_len = (params.FW_primer && !params.skip_cutadapt) ? params.FW_primer.size() : 0
+    RV_primer_len = (params.RV_primer && !params.skip_cutadapt) ? params.RV_primer.size() : 0
 
     trunclenf_range = params.trunclenf_range ?: ""
     trunclenr_range = params.trunclenr_range ?: ""
