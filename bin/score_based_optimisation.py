@@ -67,6 +67,8 @@ def main():
 
     scores = pd.DataFrame({'run': df['run']})
     total_score = pd.Series(0.0, index=df.index)
+    
+    any_metric_used = False
 
     for i, metric in enumerate(metrics):
         if metric not in df.columns or df[metric].isna().all():
@@ -81,6 +83,7 @@ def main():
 
         # Min–max scaling
         scaled = (values - min_v) / (max_v - min_v)
+        any_metric_used = True
 
         # Direction
         direction = directions[i]
@@ -94,97 +97,100 @@ def main():
         scores[metric + "_scaled"] = scaled
 
     scores["total_score"] = total_score
+
+    if not any_metric_used:
+        print(json.dumps([]))
+        return 0
+
     best_run = scores.sort_values("total_score", ascending=False).iloc[0]["run"]
     print(json.dumps([best_run]))
 
     # =========================
     # Write scoring report
     # =========================
+    if any_metric_used:
+        with open("report.txt", "w") as f:
+            f.write("Run optimisation report\n")
+            f.write("=" * 60 + "\n\n")
 
-    with open("report.txt", "w") as f:
-        f.write("Run optimisation report\n")
-        f.write("=" * 60 + "\n\n")
+            f.write("Scoring method:\n")
+            f.write("- Metrics are min–max scaled to [0, 1]\n")
+            f.write("- Higher scaled value = better performance\n")
+            f.write("- Negatively associated metrics are inverted\n")
+            f.write("- Final score = weighted sum of scaled metrics\n\n")
 
-        f.write("Scoring method:\n")
-        f.write("- Metrics are min–max scaled to [0, 1]\n")
-        f.write("- Higher scaled value = better performance\n")
-        f.write("- Negatively associated metrics are inverted\n")
-        f.write("- Final score = weighted sum of scaled metrics\n\n")
+            f.write(f"Optimal run (highest total score): {best_run}\n\n")
 
-        f.write(f"Optimal run (highest total score): {best_run}\n\n")
+            # -------------------------
+            # Metric summaries
+            # -------------------------
+            for i, metric in enumerate(metrics):
+                if metric not in df.columns or metric + "_scaled" not in scores.columns:
+                    continue
 
-        # -------------------------
-        # Metric summaries
-        # -------------------------
-        for i, metric in enumerate(metrics):
-            if metric not in df.columns or metric + "_scaled" not in scores.columns:
-                continue
+                direction = "higher is better" if directions[i] == "+" else "lower is better"
+                weight = weights[i]
 
-            direction = "higher is better" if directions[i] == "+" else "lower is better"
-            weight = weights[i]
+                f.write(f"Top 10 runs by {metric}:\n")
+                f.write("-" * 40 + "\n")
+                f.write(f"Direction: {direction}, Weight: {weight}\n\n")
 
-            f.write(f"Top 10 runs by {metric}:\n")
+                metric_df = (
+                    pd.DataFrame({
+                        "run": df["run"],
+                        "raw_value": df[metric],
+                        "scaled_value": scores[metric + "_scaled"],
+                    })
+                    .assign(rank=df[metric].rank(ascending=(directions[i] == "-"), method="average", na_option="bottom"))
+                    .sort_values("scaled_value", ascending=False)
+                    .head(10)
+                )
+
+                for _, row in metric_df.iterrows():
+                    f.write(
+                        f"Run: {row['run']}, "
+                        f"{metric}: {row['raw_value']:.6g}, "
+                        f"scaled: {row['scaled_value']:.4f}, "
+                        f"rank: {row['rank']}\n"
+                    )
+
+                f.write("\n")
+
+            # -------------------------
+            # Overall score ranking
+            # -------------------------
+            f.write("Top 10 runs by total score:\n")
             f.write("-" * 40 + "\n")
-            f.write(f"Direction: {direction}, Weight: {weight}\n\n")
 
-            metric_df = (
-                pd.DataFrame({
-                    "run": df["run"],
-                    "raw_value": df[metric],
-                    "scaled_value": scores[metric + "_scaled"],
-                })
-                .assign(rank=df[metric].rank(ascending=(directions[i] == "-"), method="average"))
-                .sort_values("scaled_value", ascending=False)
-                .head(10)
-            )
+            top_total = scores.sort_values("total_score", ascending=False).head(10)
 
-            for _, row in metric_df.iterrows():
+            for _, row in top_total.iterrows():
                 f.write(
                     f"Run: {row['run']}, "
-                    f"{metric}: {row['raw_value']:.6g}, "
-                    f"scaled: {row['scaled_value']:.4f}, "
-                    f"rank: {row['rank']}\n"
+                    f"total_score: {row['total_score']:.4f}\n"
                 )
 
             f.write("\n")
 
-        # -------------------------
-        # Overall score ranking
-        # -------------------------
-        f.write("Top 10 runs by total score:\n")
-        f.write("-" * 40 + "\n")
+            # -------------------------
+            # Per-run breakdown (best run)
+            # -------------------------
+            f.write(f"Score breakdown for optimal run ({best_run}):\n")
+            f.write("-" * 40 + "\n")
 
-        top_total = scores.sort_values("total_score", ascending=False).head(10)
+            best_idx = scores[scores["run"] == best_run].index[0]
 
-        for _, row in top_total.iterrows():
-            f.write(
-                f"Run: {row['run']}, "
-                f"total_score: {row['total_score']:.4f}\n"
-            )
+            for i, metric in enumerate(metrics):
+                col = metric + "_scaled"
+                if col not in scores.columns:
+                    continue
 
-        f.write("\n")
-
-        # -------------------------
-        # Per-run breakdown (best run)
-        # -------------------------
-        f.write(f"Score breakdown for optimal run ({best_run}):\n")
-        f.write("-" * 40 + "\n")
-
-        best_idx = scores[scores["run"] == best_run].index[0]
-
-        for i, metric in enumerate(metrics):
-            col = metric + "_scaled"
-            if col not in scores.columns:
-                continue
-
-            f.write(
-                f"{metric}: "
-                f"raw={df.loc[best_idx, metric]:.6g}, "
-                f"scaled={scores.loc[best_idx, col]:.4f}, "
-                f"weight={weights[i]}\n"
-            )
-
-
+                f.write(
+                    f"{metric}: "
+                    f"raw={df.loc[best_idx, metric]:.6g}, "
+                    f"scaled={scores.loc[best_idx, col]:.4f}, "
+                    f"weight={weights[i]}\n"
+                )
 
 if __name__ == "__main__":
     sys.exit(main())
