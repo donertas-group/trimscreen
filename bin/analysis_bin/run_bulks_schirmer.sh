@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-numbers=(10 11)
+numbers=(3 10 11 18 19 20 21)
 dataset_name="schirmer2015"
 
 for n in "${numbers[@]}"; do

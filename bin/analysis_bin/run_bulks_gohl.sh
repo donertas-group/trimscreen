@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 
-numbers=(1)
-#numbers=(2 3 4 5 6 7 8 9)
-dataset_name="tourlousse2022"
+numbers=(1 2)
+dataset_name="gohl2016"
 
 for n in "${numbers[@]}"; do
     s=".${n}"
-    #./driver_compare_w_mock.allruns.py -D "${dataset_name}" --out_suffix "${s}"
-    #./betadiv.py -D "${dataset_name}" --out_suffix "${s}"
+    ./driver_compare_w_mock.allruns.py -D "${dataset_name}" --out_suffix "${s}" --true /scratch/shire/data/nj/raw_data/published/gohl2016/true_composition.csv
+    ./betadiv.py -D "${dataset_name}" --out_suffix "${s}"
     ./driver_reps_similarity.allruns.py \
         -D "${dataset_name}" \
         --out_suffix "${s}" \
