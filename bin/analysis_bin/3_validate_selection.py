@@ -1,35 +1,45 @@
 #!/usr/bin/env python3
 import os
 import pandas as pd
+import traceback
 
-# env
-file_dir = "/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output" 
+# ------------------------
+# Paths
+# ------------------------
+
+file_dir = "/scratch/shire/ssd/pipeline/16s_nf_pipeline/analysis_mock/output"
+metadata_file = "/scratch/shire/data/nj/projects/trimscreen_manuscript/metadata/table_1_metadata.csv"
 
 # ------------------------
 # Load inputs
 # ------------------------
 
-selected = pd.read_csv(os.path.join(file_dir, "selected_runs.tsv"), sep="\t")
-f1 = pd.read_csv(os.path.join(file_dir, "f1_scores.tsv"), sep="\t")
-
-# Sanity checks
-required_cols = {"dataset", "run", "f1"}
-if not required_cols.issubset(f1.columns):
-    raise ValueError(f"f1_scores.tsv must contain columns: {required_cols}")
-
-# ------------------------
-# Merge selection with F1
-# ------------------------
-
-df = f1.merge(
-    selected,
-    on="dataset",
-    how="left",
-    validate="many_to_one"
+selected = pd.read_csv(
+    os.path.join(file_dir, "selected_runs.tsv"),
+    sep="\t"
 )
 
-if df["selected_run"].isna().any():
-    raise ValueError("Some datasets are missing selected runs")
+metadata = pd.read_csv(metadata_file)
+
+# ------------------------
+# Sanity checks (global)
+# ------------------------
+
+required_selected_cols = {"dataset", "selected_run"}
+if not required_selected_cols.issubset(selected.columns):
+    raise ValueError(f"selected_runs.tsv must contain columns: {required_selected_cols}")
+
+required_meta_cols = {"dataset_label", "dataset_name_in_pipeline"}
+if not required_meta_cols.issubset(metadata.columns):
+    raise ValueError(f"Metadata must contain columns: {required_meta_cols}")
+
+# ------------------------
+# Dataset label → pipeline name map
+# ------------------------
+
+ds_to_pipeline = dict(
+    zip(metadata["dataset_label"], metadata["dataset_name_in_pipeline"])
+)
 
 # ------------------------
 # Per-dataset evaluation
@@ -37,63 +47,101 @@ if df["selected_run"].isna().any():
 
 results = []
 
-for dataset, dfd in df.groupby("dataset"):
-    dfd = dfd.copy()
+for _, row in selected.iterrows():
+    dataset = row["dataset"]
+    sel_run = row["selected_run"]
 
-    # Best possible F1
-    idx_best = dfd["f1"].idxmax()
-    best_f1 = dfd.loc[idx_best, "f1"]
+    try:
+        # Map dataset name
+        if dataset not in ds_to_pipeline:
+            raise ValueError("dataset_name_in_pipeline not found in metadata")
 
-    # Selected run
-    sel_run = dfd["selected_run"].iloc[0]
-    sel_row = dfd[dfd["run"] == sel_run]
+        dataset_name_in_pipeline = ds_to_pipeline[dataset]
 
-    if sel_row.empty:
-        raise ValueError(f"Selected run {sel_run} not found in F1 table for {dataset}")
+        merged_file = os.path.join(
+            file_dir,
+            f"merged_table.{dataset_name_in_pipeline}.csv"
+        )
 
-    sel_f1 = sel_row["f1"].iloc[0]
+        if not os.path.exists(merged_file):
+            raise FileNotFoundError(f"Missing merged file: {merged_file}")
 
-    # Rank selected run by F1 (1 = best)
-    dfd["f1_rank"] = dfd["f1"].rank(ascending=False, method="min")
-    sel_rank = dfd.loc[dfd["run"] == sel_run, "f1_rank"].iloc[0]
+        # Load ALL runs for this dataset
+        merged = pd.read_csv(merged_file)
 
-    results.append({
-        "dataset": dataset,
-        "selected_run": sel_run,
-        "selected_f1": sel_f1,
-        "max_f1": best_f1,
-        "f1_gap": best_f1 - sel_f1,
-        "relative_efficiency": sel_f1 / best_f1 if best_f1 > 0 else float("nan"),
-        "f1_rank": int(sel_rank),
-        "n_runs": len(dfd)
-    })
+        required_cols = {"run_id", "f1_score"}
+        if not required_cols.issubset(merged.columns):
+            raise ValueError(
+                f"{merged_file} must contain columns: {required_cols}"
+            )
 
-res = pd.DataFrame(results)
+        # Best possible F1
+        best_f1 = merged["f1_score"].max()
+
+        # Selected run row
+        sel_row = merged[merged["run_id"] == sel_run]
+        if sel_row.empty:
+            raise ValueError(
+                f"Selected run {sel_run} not found in merged table"
+            )
+
+        sel_f1 = sel_row["f1_score"].iloc[0]
+
+        # Rank selected run by F1 (1 = best)
+        merged = merged.copy()
+        merged["f1_rank"] = merged["f1_score"].rank(
+            ascending=False,
+            method="min"
+        )
+
+        sel_rank = int(
+            merged.loc[merged["run_id"] == sel_run, "f1_rank"].iloc[0]
+        )
+
+        results.append({
+            "dataset": dataset,
+            "selected_run": sel_run,
+            "selected_f1": sel_f1,
+            "max_f1": best_f1,
+            "f1_gap": best_f1 - sel_f1,
+            "relative_efficiency": sel_f1 / best_f1 if best_f1 > 0 else float("nan"),
+            "f1_rank": sel_rank,
+            "n_runs": len(merged)
+        })
+
+    except Exception as e:
+        print(f"[WARN] Skipping dataset '{dataset}': {e}")
+        # Uncomment for full traceback if debugging:
+        # traceback.print_exc()
+        continue
 
 # ------------------------
 # Output tables
 # ------------------------
 
-# Main manuscript / supplement table
-res.sort_values("dataset").to_csv(
-    os.path.join(file_dir, "validation_per_dataset.tsv"),
-    sep="\t",
-    index=False,
-    float_format="%.4f"
-)
+res = pd.DataFrame(results)
 
-# Summary statistics (useful for Results text)
-summary = res[[
-    "selected_f1",
-    "max_f1",
-    "f1_gap",
-    "relative_efficiency",
-    "f1_rank"
-]].describe()
+if res.empty:
+    print("[ERROR] No datasets processed successfully. No output written.")
+else:
+    res.sort_values("dataset").to_csv(
+        os.path.join(file_dir, "validation_per_dataset.tsv"),
+        sep="\t",
+        index=False,
+        float_format="%.4f"
+    )
 
-summary.to_csv(
-    os.path.join(file_dir, "validation_summary_stats.tsv"),
-    sep="\t",
-    float_format="%.4f"
-)
+    summary = res[[
+        "selected_f1",
+        "max_f1",
+        "f1_gap",
+        "relative_efficiency",
+        "f1_rank"
+    ]].describe()
+
+    summary.to_csv(
+        os.path.join(file_dir, "validation_summary_stats.tsv"),
+        sep="\t",
+        float_format="%.4f"
+    )
 
