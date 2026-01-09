@@ -26,7 +26,11 @@ bokulich_b5_staggered	/scratch/shire/ssd/pipeline/16s_nf_pipeline/bokulich2015/o
 gohl_1	/scratch/shire/ssd/pipeline/16s_nf_pipeline/gohl2016/output.1/compare_runs/report.txt
 gohl_2	/scratch/shire/ssd/pipeline/16s_nf_pipeline/gohl2016/output.2/compare_runs/report.txt
 kozich	/scratch/shire/ssd/pipeline/16s_nf_pipeline/mock13-15/output/compare_runs/report.txt
+schirmer_1	/scratch/shire/ssd/pipeline/16s_nf_pipeline/schirmer2015/output.1/compare_runs/report.txt
+schirmer_2	/scratch/shire/ssd/pipeline/16s_nf_pipeline/schirmer2015/output.2/compare_runs/report.txt
+schirmer_3	/scratch/shire/ssd/pipeline/16s_nf_pipeline/schirmer2015/output.3/compare_runs/report.txt
 schirmer_4	/scratch/shire/ssd/pipeline/16s_nf_pipeline/schirmer2015/output.4/compare_runs/report.txt
+schirmer_5	/scratch/shire/ssd/pipeline/16s_nf_pipeline/schirmer2015/output.4/compare_runs/report.txt
 schirmer_6	/scratch/shire/ssd/pipeline/16s_nf_pipeline/schirmer2015/output.6/compare_runs/report.txt
 schirmer_7	/scratch/shire/ssd/pipeline/16s_nf_pipeline/schirmer2015/output.7/compare_runs/report.txt
 schirmer_8	/scratch/shire/ssd/pipeline/16s_nf_pipeline/schirmer2015/output.8/compare_runs/report.txt

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-numbers=(1 2)
+numbers=(2)
 dataset_name="gohl2016"
 
 for n in "${numbers[@]}"; do
