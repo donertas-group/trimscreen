@@ -5,14 +5,14 @@ import math
 import argparse
 import json
 
-LAMBDA = 0.5  # variance penalty weight
-
 #######################
 # This script scores runs per sample using provided metrics,
 # then aggregates scores across samples using:
 #   mean(total_score) - λ * std(total_score)
 # where λ = 0.5.
 #######################
+
+LAMBDA = 0.5  # variance penalty weight
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Find the best run across samples")
@@ -142,17 +142,16 @@ def main():
         )
 
         f.write("Evaluated metrics:\n")
-		for i, metric in enumerate(metrics):
-			if metric not in df0.columns:
-				continue
+        for i, metric in enumerate(metrics):
+            if metric not in df0.columns:
+                continue
 
-			direction = "higher is better" if directions[i] == "+" else "lower is better"
-			weight = weights[i]
+            direction = "higher is better" if directions[i] == "+" else "lower is better"
+            weight = weights[i]
 
-			f.write(f"{metric}, direction: {direction}, weight: {weight}\n")
+            f.write(f"{metric} (direction: {direction}, weight: {weight})\n")
 
-
-        f.write(f"Optimal run: {best_run}\n\n")
+        f.write(f"\nOptimal run: {best_run}\n\n")
 
         # -------------------------
         # Overall ranking
