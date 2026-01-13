@@ -13,9 +13,13 @@ if (params.metadata) {
         .splitCsv(header: true)
     
     ch_metadata_samples = ch_metadata.filter { row -> row.condition == "sample" }
-        .map { it.sampleID }
+       // .map { it.sampleID }
+        .map { row -> [row.sampleID, row.is_replicate == true || row.is_replicate == 'true'] } 
 
-} else { ch_metadata = Channel.empty() }
+} else { 
+    ch_metadata = Channel.empty() 
+    ch_metadata_samples = Channel.empty()
+}
 
 
 workflow AMPLISEQ_SCREENING {
@@ -73,24 +77,37 @@ workflow AMPLISEQ_SCREENING {
         ch_samplesheet_samples = ch_samplesheet
             .map { meta, read1, read2 -> [meta.id, [meta, read1, read2]] }
             .join (ch_metadata_samples)
-            .map { id, tuple -> tuple }            
+            .map { id, tuple, is_replicate -> [tuple, is_replicate] }            
     }
-    else { ch_samplesheet_samples = ch_samplesheet }
+    else { ch_samplesheet_samples = ch_samplesheet.map { tuple -> [tuple, false] } 
+    }
 
     ch_samplesheet_subset = ch_samplesheet_samples.collect()
         .combine (ch_is_best_run)
         .map { tuple ->
             def is_best_run = tuple[-1]
-            def all_samples = tuple[0..-2].collate(3)
+            def all_items = tuple[0..-2].collate(2)
+
+            // DEBUG: Check the structure
+            //log.info "DEBUG: all_items size = ${all_items.size()}"
+            //log.info "DEBUG: first item = ${all_items[0]}"
+            //log.info "DEBUG: first item class = ${all_items[0].getClass()}"
+
             if (subset_samples && !is_best_run) {
-                if (subset_samples < all_samples.size()) {
-                    log.info "Randomly selecting ${subset_samples} samples out of ${all_samples.size()} for screening"
-                    return all_samples.shuffled().take(subset_samples)
+                // Sort so replicates come first, then shuffle within each group
+                def replicates = all_items.findAll { item -> item[1] }.collect { item -> item[0] }.shuffled()
+                def non_replicates = all_items.findAll { item -> !item[1] }.collect { item -> item[0] }.shuffled()
+                def sorted_samples = replicates + non_replicates
+                
+                if (subset_samples < sorted_samples.size()) {
+                    log.info "Selecting ${subset_samples} samples (prioritizing ${replicates.size()} replicates) out of ${sorted_samples.size()} total"
+                    return sorted_samples.take(subset_samples)
                 } else {
-                    log.info "Requested ${subset_samples} samples but only ${all_samples.size()} available - using all samples for screening"
-                    return all_samples
+                    log.info "Requested ${subset_samples} samples but only ${sorted_samples.size()} available - using all samples for screening"
+                    return sorted_samples
                 }
             } else {
+                def all_samples = all_items.collect { item -> item[0]}
                 log.info "Using all ${all_samples.size()} non-control samples for screening"
                 return all_samples
             }
