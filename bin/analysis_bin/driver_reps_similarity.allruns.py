@@ -70,10 +70,11 @@ def main():
     # --- Prepare data for plotting ---
 
     for run_id in runs:
-        similarity = run_compare(args.D, run_id, args.R, args.out_suffix)
+        #similarity = run_compare(args.D, run_id, args.R, args.out_suffix)
 
         # take metrics from the first sample among the replicates
         shannon = fu_tb.loc[fu_tb['run'] == run_id, 'shannon_Genus'].iloc[0]
+        similarity = fu_tb.loc[fu_tb['run'] == run_id, 'rep_similarity'].iloc[0]
         preads = fu_tb.loc[fu_tb['run'] == run_id, 'retained_reads_percent'].iloc[0]
         nasvs = fu_tb.loc[fu_tb['run'] == run_id, 'nasvs'].iloc[0]
 
