@@ -24,9 +24,43 @@ def parse_args(args=None):
     )
     return parser.parse_args()
 
+def ruzicka_distance(x, y):
+    num = np.minimum(x, y).sum()
+    den = np.maximum(x, y).sum()
+    if den == 0:
+        return 0.0  # identical zero vectors
+    return 1.0 - (num / den)
 
-def ruzicka(u, v):
-    """Compute the Ruzicka (abundance-based Jaccard) distance between two vectors."""
+def calculate_mean_similarity(asv_table, rep_samples):
+    """
+    asv_table: ASVs x samples count table
+    rep_samples: list of replicate sample IDs (columns)
+    """
+
+    if len(rep_samples) < 2:
+        return None
+
+    # Subset to replicates and drop ASVs with zero counts across all reps
+    data = asv_table[rep_samples]
+    data = data.loc[data.sum(axis=1) > 0]
+
+    # calculate relative abundance
+    data = data.div(data.sum(axis=0), axis=1)
+    
+    # Transpose: samples as rows, ASVs as columns
+    data_T = data.T
+
+    # Pairwise Ruzicka distances
+    dist_matrix = pdist(data_T.values, metric=ruzicka_distance)
+
+    # Convert to similarity
+    similarities = 1.0 - dist_matrix
+
+    return similarities.mean()
+
+
+def obs_ruzicka(u, v):
+    """Compute the Ruzicka (abundance-based Jaccard) dis between two vectors."""
     u, v = np.asarray(u), np.asarray(v)
     denominator = np.maximum(u, v).sum()
     if denominator == 0:
@@ -34,7 +68,7 @@ def ruzicka(u, v):
     return 1.0 - (np.minimum(u, v).sum() / denominator)
 
 
-def calculate_mean_similarity(asv_table, asv_tax, run_id, rep_samples, rank):
+def obs_calculate_mean_similarity(asv_table, asv_tax, run_id, rep_samples, rank):
     merged = asv_table.merge(asv_tax, left_index=True, right_index=True)
 
     # Drop NA or empty rank entries
