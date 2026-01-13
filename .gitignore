@@ -1,7 +1,9 @@
+.gitignore
 .nextflow*
 work/
 data/
-obsolete/
+*obsolete*
+*unused*
 results/
 .DS_Store
 testing/
