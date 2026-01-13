@@ -21,7 +21,7 @@ def parse_args(args=None):
     return parser.parse_args()
 
 def ruzicka(u, v):
-    """Compute the Ruzicka (abundance-based Jaccard) distance between two vectors."""
+    """Compute the Ruzicka (abundance-based Jaccard) dissimilarity between two vectors."""
     u, v = np.asarray(u), np.asarray(v)
     numerator = np.minimum(u, v).sum()
     denominator = np.maximum(u, v).sum()
@@ -101,7 +101,7 @@ def main():
 
         # melt into long form
         dist_long = dist_matrix.stack().reset_index()
-        dist_long.columns = ["run1", "run2", "ruzicka_distance"]
+        dist_long.columns = ["run1", "run2", "ruzicka_dissimilarity"]
         dist_long = dist_long[dist_long["run1"] < dist_long["run2"]]  # avoid duplicates
         dist_long["sample"] = sample
         results.append(dist_long)
@@ -117,20 +117,20 @@ def main():
     all_dists.to_csv(all_outfile, index=False)
     print(f"Per-sample Ruzicka distances saved to: {all_outfile}")
 
-    ### --- NEW: summarize per-run median distance across all samples ---
+    ### --- NEW: summarize per-run median dissimilarity across all samples ---
     run_scores = []
     for run in run_names:
         # collect distances where this run participated
         subset = all_dists[(all_dists.run1 == run) | (all_dists.run2 == run)]
         if subset.empty:
             continue
-        median_val = subset["ruzicka_distance"].median()
-        run_scores.append({"run_id": run, "median_distance": median_val})
+        median_val = subset["ruzicka_dissimilarity"].median()
+        run_scores.append({"run_id": run, "median_dissimilarity": median_val})
 
     median_df = pd.DataFrame(run_scores)
-    median_outfile = os.path.join(args.out, f"median_distances_per_sample.{args.dataset_name}{args.out_suffix}.csv")
+    median_outfile = os.path.join(args.out, f"median_dissimilarity_per_sample.{args.dataset_name}{args.out_suffix}.csv")
     median_df.to_csv(median_outfile, index=False)
-    print(f"Median per-run distances saved to: {median_outfile}")
+    print(f"Median across-run dissimilarity saved to: {median_outfile}")
 
 if __name__ == "__main__":
     sys.exit(main())
