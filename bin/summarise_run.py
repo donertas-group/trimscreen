@@ -59,47 +59,6 @@ def calculate_mean_similarity(asv_table, rep_samples):
     return similarities.mean()
 
 
-def obs_ruzicka(u, v):
-    """Compute the Ruzicka (abundance-based Jaccard) dis between two vectors."""
-    u, v = np.asarray(u), np.asarray(v)
-    denominator = np.maximum(u, v).sum()
-    if denominator == 0:
-        return 0.0
-    return 1.0 - (np.minimum(u, v).sum() / denominator)
-
-
-def obs_calculate_mean_similarity(asv_table, asv_tax, run_id, rep_samples, rank):
-    merged = asv_table.merge(asv_tax, left_index=True, right_index=True)
-
-    # Drop NA or empty rank entries
-    merged = merged[
-        merged[rank].notna() & (merged[rank].astype(str).str.strip() != "")
-    ]
-
-    if merged.empty or len(rep_samples) < 2:
-        return None
-
-    # Aggregate counts at chosen rank
-    agg = merged.groupby(rank)[rep_samples].sum()
-
-    # Transpose for distance computation (samples as rows)
-    agg_T = agg.T
-
-    # Compute Ruzicka distance matrix
-    dist_matrix = pdist(agg_T, metric=ruzicka)
-    dist_df = pd.DataFrame(
-        squareform(dist_matrix),
-        index=agg_T.index,
-        columns=agg_T.index,
-    )
-
-    # Mean pairwise distance → similarity
-    mean_dist = dist_df.values[np.triu_indices_from(dist_df, k=1)].mean()
-    similarity = 1.0 - mean_dist
-
-    return similarity
-
-
 def process_run(
     summary_file,
     asv_file,
@@ -189,9 +148,7 @@ def process_run(
     replicates = list(set(rep_samples).intersection(samples))
   
     if len(replicates) >= 2:
-        rep_sim = calculate_mean_similarity(
-            asv_table, asv_tax, run, replicates, rank="Genus"
-        )
+        rep_sim = calculate_mean_similarity(asv_table, replicates)
 
     rep_similarity = [
         rep_sim if sample in replicates else None
