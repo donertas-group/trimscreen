@@ -91,51 +91,69 @@ def f1_score(y_correct, y_false, y_undetected):
 
 
 def evaluate_detection(taxon_reads, true_taxa):
-    x_reads = []
-    y_correct = []
-    y_false = []
-    y_undetected = []
-    y_f1 = []
+    """
+    Compute final detection statistics and F1 score.
 
-    seen = set()
+    Parameters
+    ----------
+    taxon_reads : pd.DataFrame
+        DataFrame with detected taxa at the chosen rank.
+        Must have the taxon name in the first column.
+    true_taxa : set
+        Set of true taxa at the chosen rank.
 
-    for _, row in taxon_reads.iterrows():
-        taxon = row.iloc[0]
-        reads = row['N_reads']
-        seen.add(taxon)
+    Returns
+    -------
+    tp : int Number of correctly detected taxa. 
+    fp : int Number of falsely detected taxa.
+    fn : int Number of undetected true taxa.
+    f1 : float F1 score for the final detection state.
+    """
 
-        x_reads.append(reads)
-        correct = len(seen & true_taxa)
-        false = len(seen - true_taxa)
-        undetected = len(true_taxa - seen)
-        f1 = f1_score(correct, false, undetected)
+    # All detected taxa
+    detected_taxa = set(taxon_reads.iloc[:, 0]) if not taxon_reads.empty else set()
 
-        y_correct.append(correct)
-        y_false.append(false)
-        y_undetected.append(undetected)
-        y_f1.append(f1)
+    tp = len(detected_taxa & true_taxa)
+    fp = len(detected_taxa - true_taxa)
+    fn = len(true_taxa - detected_taxa)
 
-    return x_reads, y_correct, y_false, y_undetected, y_f1
+    f1 = f1_score(tp, fp, fn)
 
+    return tp, fp, fn, f1
 
 def main():
     args = parse_args()
-    asv_tax, asv_table, true_comp, summary_table = read_files(args.dataset_name, args.run, args.true, args.X, args.out_suffix)
-    
+    asv_tax, asv_table, true_comp, summary_table = read_files(
+        args.dataset_name,
+        args.run,
+        args.true,
+        args.X,
+        args.out_suffix
+    )
+
     sample_names = asv_table.columns[1:]
-    f1_means = []
 
     for sample in sample_names:
-        taxon_reads, true_taxa = prepare_taxa_sets(asv_tax, asv_table, true_comp, args.rank, sample)
-        _, TP, FP, FN, f1_scores = evaluate_detection(taxon_reads, true_taxa)
-        if len(f1_scores) > 0:
-            f1_means.append(f1_scores[-1])  # last F1 = full detection summary
+        taxon_reads, true_taxa = prepare_taxa_sets(
+            asv_tax,
+            asv_table,
+            true_comp,
+            args.rank,
+            sample
+        )
 
-    f1 = f1_means[0] if f1_means else 0
-    avg_f1 = sum(f1_means) / len(f1_means) if f1_means else 0
+        TP, FP, FN, f1 = evaluate_detection(taxon_reads, true_taxa)
 
-    output = {"f1": f1, "f1_mean": avg_f1, "TP": TP[-1], "FP": FP[-1], "FN": FN[-1]}
-    print(json.dumps(output))
+        output = {
+            "run": args.run,
+            "sample": sample,
+            "f1": f1,
+            "TP": TP,
+            "FP": FP,
+            "FN": FN
+        }
+
+        print(json.dumps(output))
 
 if __name__ == "__main__":
     main()
