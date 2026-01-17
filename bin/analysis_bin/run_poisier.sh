@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
-dataset_name="mock12"
+dataset_name="poirier2018"
 
-    ./driver_compare_w_true.allruns.py -D "${dataset_name}"
+    ./driver_compare_w_true.allruns.py -D "${dataset_name}" 
     ./driver_merge_stats.py \
         -D "${dataset_name}" \
         --f1_file "f1_scores_${dataset_name}_Genus.csv" 
-
 
 
 

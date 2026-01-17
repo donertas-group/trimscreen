@@ -6,13 +6,11 @@ dataset_name="tourlousse2022"
 
 for n in "${numbers[@]}"; do
     s=".${n}"
-    #./driver_compare_w_mock.allruns.py -D "${dataset_name}" --out_suffix "${s}"
-    #./betadiv.py -D "${dataset_name}" --out_suffix "${s}"
-    ./driver_reps_similarity.allruns.py \
+    ./driver_compare_w_true.allruns.py -D "${dataset_name}" --out_suffix "${s}"
+    ./driver_merge_stats.py \
         -D "${dataset_name}" \
         --out_suffix "${s}" \
-        --f1_file "f1_scores_${dataset_name}${s}_Genus.txt" \
-        --median_distance_file "median_distances_per_sample.${dataset_name}${s}.csv"
+        --f1_file "f1_scores_${dataset_name}${s}_Genus.csv" 
 
 done
 
