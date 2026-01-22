@@ -113,14 +113,15 @@ ch_report_template = Channel.fromPath("${params.report_template}", checkIfExists
 ch_report_css = Channel.fromPath("${params.report_css}", checkIfExists: true)
 ch_report_logo = Channel.fromPath("${params.report_logo}", checkIfExists: true)
 ch_report_abstract = params.report_abstract ? Channel.fromPath(params.report_abstract, checkIfExists: true) : []
-
 trunclenf = params.trunclenf ?: 0
 trunclenr = params.trunclenr ?: 0
 if ( !single_end && !params.illumina_pe_its && (params.trunclenf == null || params.trunclenr == null) && !params.input_fasta ) {
+*/
+if ( params.skip_trim_screening ) {
     find_truncation_values = true
     log.warn "No DADA2 cutoffs were specified (`--trunclenf` & `--trunclenr`), therefore reads will be truncated where median quality drops below ${params.trunc_qmin} (defined by `--trunc_qmin`) but at least a fraction of ${params.trunc_rmin} (defined by `--trunc_rmin`) of the reads will be retained.\nThe chosen cutoffs do not account for required overlap for merging, therefore DADA2 might have poor merging efficiency or even fail.\n"
 } else { find_truncation_values = false }
-
+/*
 // save params to values to be able to overwrite it
 tax_agglom_min = params.tax_agglom_min
 tax_agglom_max = params.tax_agglom_max
@@ -288,12 +289,12 @@ workflow AMPLISEQ_SIMPLIFIED {
     ch_input_fasta = Channel.empty()
 
 
-    ch_input_reads = ch_samplesheet
+/*    ch_input_reads = ch_samplesheet
         .map{ meta, readfw, readrv -> 
             meta.single_end = single_end.toBoolean()
             return [meta, [readfw, readrv]]
         }
-
+*/
  // long_read option in detaxizer is disabled from here
 /*        
         def reads = single_end ? readfw : [readfw,readrv]
@@ -307,7 +308,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     // Add primer info to sequencing files
     //
     // single region (simplified by disabling multiple region analysis)
-    ch_input_reads
+/*    ch_input_reads
         .map{ info, reads ->
             def meta = info +
                 [region: null, region_length: null] +
@@ -316,6 +317,21 @@ workflow AMPLISEQ_SIMPLIFIED {
                 [fw_primer_revcomp: params.FW_primer ? makeComplement(params.FW_primer.reverse()) : null] +
                 [rv_primer_revcomp: params.RV_primer ? makeComplement(params.RV_primer.reverse()) : null]
             return [ meta, reads ] }
+        .set { ch_input_reads }
+*/
+    ch_samplesheet
+        .map{ meta, readfw, readrv -> 
+            def new_meta = meta + [
+                single_end: single_end.toBoolean(),
+                region: null, 
+                region_length: null,
+                fw_primer: params.FW_primer, 
+                rv_primer: params.RV_primer,
+                fw_primer_revcomp: params.FW_primer ? makeComplement(params.FW_primer.reverse()) : null,
+                rv_primer_revcomp: params.RV_primer ? makeComplement(params.RV_primer.reverse()) : null
+            ]
+            return [new_meta, [readfw, readrv]]
+        }
         .set { ch_input_reads }
 
     //Filter empty files
@@ -327,7 +343,6 @@ workflow AMPLISEQ_SIMPLIFIED {
         .set { ch_reads_result }
 
     ch_reads_result.passed.set { ch_reads }
-
     ch_reads_result.failed
         .map { meta, reads -> [ meta.id ] }
         .collect()
@@ -342,10 +357,12 @@ workflow AMPLISEQ_SIMPLIFIED {
 
     ch_reads.dump(tag: 'ch_reads')
 
+
+
+
     //
     // MODULE: Rename files
     //
-
     RENAME_RAW_DATA_FILES ( ch_reads )
     ch_versions = ch_versions.mix(RENAME_RAW_DATA_FILES.out.versions.first())
 
@@ -361,13 +378,32 @@ workflow AMPLISEQ_SIMPLIFIED {
     //
     // MODULE: Cutadapt
     //
+
+
+
+/*
     RENAME_RAW_DATA_FILES.out.fastq
+        .combine(ch_params_safe)
+        .map { meta, reads, runID, trunclenf, trunclenr, is_best_run ->
+            def new_meta = meta + [ 
+                sample: meta.id, 
+                id: runID ? "${meta.id}.${runID}" : meta.id,
+                runID: runID ?: 'default',
+                run: runID ?: 'default',
+                trunclenf: trunclenf,
+                trunclenr: trunclenr,
+                is_best_run: is_best_run
+            ]
+            tuple(new_meta, reads)
+        }
+        .set{ ch_renamed_w_params }
+
+*/
+    ch_renamed_w_params = RENAME_RAW_DATA_FILES.out.fastq
         .combine(ch_params)
         .map { meta, reads, runID, trunclenf, trunclenr, is_best_run -> 
         def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr, is_best_run: is_best_run]  
         tuple(new_meta, reads)}
-        .set{ ch_renamed_w_params }
-
 
     if (!params.skip_cutadapt) {
         CUTADAPT_WORKFLOW (
@@ -388,9 +424,9 @@ workflow AMPLISEQ_SIMPLIFIED {
     //
     DADA2_PREPROCESSING (
         ch_trimmed_reads, 
-        false, // replacing single_end
-        false // replacing find_truncation_values
-        //trunclenr
+        single_end,
+        find_truncation_values
+        //trunclenf,
         //trunclenr
     ).reads.set { ch_filt_reads }
 

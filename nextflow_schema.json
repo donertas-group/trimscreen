@@ -1015,9 +1015,9 @@
             "description": "",
             "default": "",
             "properties": {
-                "skip_ampliseq_screening": {
+                "skip_trim_screening": {
                     "type": "boolean",
-                    "description": "If screening trimming parameters with simplified ampliseq should be skipped."
+                    "description": "If screening trimming parameters should be skipped. When set to true, trimming with default trunc_qmin and trunc_rmin will be used."
                 },
                 "skip_run_comparison": {
                     "type": "boolean",

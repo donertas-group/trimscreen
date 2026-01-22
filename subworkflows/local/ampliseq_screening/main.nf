@@ -21,12 +21,19 @@ if (params.metadata) {
     ch_metadata_samples = Channel.empty()
 }
 
+ch_best_run = Channel.empty()
+ch_params = Channel.empty()
 
 workflow AMPLISEQ_SCREENING {
     take:
     ch_samplesheet
     
     main:
+
+
+
+    if (!params.skip_trim_screening) {
+
     // generate sets of parameters based on input ranges
     FW_primer_len = (params.FW_primer && !params.skip_cutadapt) ? params.FW_primer.size() : 0
     RV_primer_len = (params.RV_primer && !params.skip_cutadapt) ? params.RV_primer.size() : 0
@@ -114,6 +121,8 @@ workflow AMPLISEQ_SCREENING {
         }
         .flatMap { it }
 
+
+
     // Check the number of individual runs before running the workflow
     ch_samplesheet_subset
         .combine(ch_params)
@@ -140,9 +149,9 @@ workflow AMPLISEQ_SCREENING {
         }
 
 
+
     // Run simplified version of ampliseq
     AMPLISEQ_SIMPLIFIED(ch_samplesheet_subset, ch_params)
-
  
     //
     // SUBWORKFLOW: Compare runs 
@@ -178,7 +187,6 @@ workflow AMPLISEQ_SCREENING {
         // If comparison is skipped, output all runs
         ch_best_tsv = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
         ch_best_fasta = AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
-        ch_best_run = Channel.empty()
     }
 
 
@@ -211,7 +219,11 @@ workflow AMPLISEQ_SCREENING {
         ch_best_fasta = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_fasta
     
     }
-
+    
+    } else { 
+        ch_params_default = channel.value(tuple("default", null, null, false))
+        AMPLISEQ_SIMPLIFIED( ch_samplesheet, ch_params_default )
+    } // when screening is skipped, run ampliseq with default quality-based trimmiing
 
 
     emit:
