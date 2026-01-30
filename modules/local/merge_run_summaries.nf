@@ -9,15 +9,16 @@ process MERGE_RUN_SUMMARIES {
 
     input:
     path stats
+    val suffix
 
     output:
-    path "full_table.csv" , emit: csv
+    path "sample_run_summaries${suffix}.csv" , emit: csv
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
     """
-    merge_summaries.py -i $stats
+    merge_summaries.py -i $stats -o sample_run_summaries${suffix}.csv
     """
 }

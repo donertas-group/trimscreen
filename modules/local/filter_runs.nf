@@ -9,15 +9,16 @@ process FILTER_RUNS {
 
     input:
     path table
+    val suffix
 
     output:
-    tuple stdout, path("filtered_table.csv"), emit: filtered
+    tuple stdout, path("sample_run_summaries${suffix}.csv"), emit: filtered
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
     """
-    filter_runs.py -i $table
+    filter_runs.py -i $table -o sample_run_summaries${suffix}.csv
     """
 }

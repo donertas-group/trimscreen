@@ -11,6 +11,7 @@ def parse_args(args=None):
 
     parser = argparse.ArgumentParser(description="Filter runs and output table.")
     parser.add_argument("-i", "--input", required=True, help="Input table")
+    parser.add_argument("-o", "--output", required=True, help="Output table")
     parser.add_argument("-r", "--lowest_relative_retention", type=float, default=0.8)
     parser.add_argument("-n", "--min_reads", type=int, default=2000)
 
@@ -101,8 +102,6 @@ def main():
     args = parse_args()
 
     file = args.input
-    columns_to_filter = args.columns
-
     full_table = pd.read_csv(file)
 
     # find good runs by evaluating the per-sample median and sd of choosen columns
@@ -121,7 +120,7 @@ def main():
     out = [[run, int(D)] for run in good_runs]
     print(json.dumps(out))
     
-    filtered_table.to_csv("filtered_table.csv", index=False)
+    filtered_table.to_csv(args.output, index=False)
 
 
 if __name__ == "__main__":

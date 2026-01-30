@@ -8,6 +8,7 @@ def parse_args(args=None):
 
     parser = argparse.ArgumentParser(description="Merge all run files into one.")
     parser.add_argument("-i", "--input", nargs="+", required=True, help="Input files")
+    parser.add_argument("-o", "--output", required=True, help="output file name")
 
     return parser.parse_args()
 
@@ -29,7 +30,7 @@ def main():
     merged_df = pd.concat(dfs, ignore_index=True)
 
     # Save to a new CSV file
-    merged_df.to_csv("full_table.csv", index=False)
+    merged_df.to_csv(args.output, index=False)
 
 if __name__ == "__main__":
     sys.exit(main())

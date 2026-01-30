@@ -16,7 +16,7 @@ process RAREFY_RUNS {
     tuple val(meta), path(asv_table), val(depth)
 
     output:
-    path "ASV_table_rarefied.tsv.gz", emit: tsv
+    tuple val(meta), path("ASV_table_rarefied.tsv.gz"), emit: tsv
 
     when:
     task.ext.when == null || task.ext.when
