@@ -42,7 +42,7 @@ workflow DADA2_PREPROCESSING {
     }
 
     ch_DADA2_QUALITY1_SVG = Channel.empty()
-    if ( !params.skip_dada_quality && params.skip_trim_screening) {
+    if ( false ){//!params.skip_dada_quality ) {
         DADA2_QUALITY1 ( ch_all_trimmed_reads.dump(tag: 'into_dada2_quality') )
         ch_versions_dada2_preprocessing = ch_versions_dada2_preprocessing.mix(DADA2_QUALITY1.out.versions)
         DADA2_QUALITY1.out.warning.subscribe { if ( it.baseName.toString().startsWith("WARNING") ) log.warn it.baseName.toString().replace("WARNING ","DADA2_QUALITY1: ") }
@@ -50,7 +50,7 @@ workflow DADA2_PREPROCESSING {
     }
 
     //find truncation values in case they are not supplied
-    if ( find_truncation_values ) {
+    /*if ( false){//find_truncation_values ) {
         TRUNCLEN ( DADA2_QUALITY1.out.tsv )
         TRUNCLEN.out.trunc
             .toSortedList()
@@ -63,21 +63,19 @@ workflow DADA2_PREPROCESSING {
             else if ( "${it[1][1]}".toInteger() <= 10 ) { log.warn "`--trunclenr` was set to ${it[1][1]}, this is too low! Please either change `--trunc_qmin` (and `--trunc_rmin`), or set `--trunclenf` and `--trunclenr`." }
             else log.warn "Probably everything is fine, but this is a reminder that `--trunclenf` was set automatically to ${it[0][1]} and `--trunclenr` to ${it[1][1]}. If this doesnt seem reasonable, then please change `--trunc_qmin` (and `--trunc_rmin`), or set `--trunclenf` and `--trunclenr` directly."
         }
+    } else {
+        Channel.fromList( [['FW', trunclenf], ['RV', trunclenr]] )
+            .toSortedList()
+            .set { ch_trunc }
+    }
+
 
     ch_trimmed_reads.combine(ch_trunc).set { ch_trimmed_reads }
-
-    } else {
-       /* Channel.fromList( [['FW', trunclenf], ['RV', trunclenr]] )
-            .toSortedList()
-            .set { ch_trunc }*/
+*/
 
     ch_trimmed_reads
         .map{ meta, reads -> [meta, reads, ['FW', meta.trunclenf], ['RV', meta.trunclenr]]}
         .set {ch_trimmed_reads}
-
-    }
-
-
 
     //filter reads
     DADA2_FILTNTRIM ( ch_trimmed_reads.dump(tag: 'into_filtntrim')  )
@@ -164,7 +162,7 @@ workflow DADA2_PREPROCESSING {
     }
 
     ch_DADA2_QUALITY2_SVG = Channel.empty()
-    if (false){// !params.skip_dada_quality && params.skip_trim_screening ) {
+    if (false){// !params.skip_dada_quality ) {
         DADA2_QUALITY2 ( ch_all_preprocessed_reads.dump(tag: 'into_dada2_quality2') )
         ch_versions_dada2_preprocessing = ch_versions_dada2_preprocessing.mix(DADA2_QUALITY2.out.versions)
         DADA2_QUALITY2.out.warning.subscribe { if ( it.baseName.toString().startsWith("WARNING") ) log.warn it.baseName.toString().replace("WARNING ","DADA2_QUALITY2: ") }
