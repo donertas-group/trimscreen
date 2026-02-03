@@ -122,9 +122,9 @@ workflow AMPLISEQ_SCREENING {
             if (count > 10000) {
                 log.warn """
         ================================================================================
-        WARNING: Too many runs 
+        WARNING: Too many sample-runs 
         ================================================================================
-        Sample numbers and parameter settings result in ${count} runs.
+        Sample numbers and parameter settings result in ${count} sample-runs.
         This can take a long time to finish, or take too much computing resources.
         
         Recommendations:
@@ -135,7 +135,7 @@ workflow AMPLISEQ_SCREENING {
         ================================================================================
                 """
             } else {
-                log.info "Number of runs: ${count}"
+                log.info "Number of sample-runs: ${count}"
             }
         }
 
