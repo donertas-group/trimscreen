@@ -45,8 +45,32 @@ workflow COMPARE_RUNS {
         .splitJson()
         .map { [it[0], it[1]] }
 
+
+    // Safety check: count items and validate
+    ch_runs_filtered
+        .toList()
+        .map { runs_list ->
+            def count = runs_list.size()
+            def run_ids = runs_list.collect { id, depth -> id }
+            
+            if (count == 0) {
+                error "No run is left after filtering, use `--trunclenf_range`, `--trunclenr_range` or decrease `--screen_interval` to screen more runs"
+            } else if (count == 1) {
+                error "Only one run (${run_ids[0]}) is left after filtering, use `--trunclenf_range`, `--trunclenr_range` or decrease `--screen_interval` to screen more runs"
+            } else if (count == 2) {
+                log.warn "Only two runs (${run_ids.join(', ')}) are left after filtering, consider using `--trunclenf_range`, `--trunclenr_range` or decrease `--screen_interval` to screen more runs"
+            } else {
+                log.info "${count} runs left after filtering"
+            }
+            
+            return runs_list
+        }
+        .flatMap { v -> v }
+        .set { ch_runs_filtered_valid }
+
+
     logged = false
-    ch_runs_filtered.subscribe { value ->
+    ch_runs_filtered_valid.subscribe { value ->
         // only log for the first element
         if (!logged) {
             def reads = value[1]
@@ -57,7 +81,7 @@ workflow COMPARE_RUNS {
 
     ch_runs_to_rarefy = ch_run_data
         .map { meta, stats, asv, tax -> [meta.runID, meta, asv] }
-        .join ( ch_runs_filtered )
+        .join ( ch_runs_filtered_valid )
         .map { run, meta, asv, depth -> [meta, asv, depth]}
 
    
