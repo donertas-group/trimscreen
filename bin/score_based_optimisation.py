@@ -151,7 +151,7 @@ def main():
 
             f.write(f"{metric} (direction: {direction}, weight: {weight})\n")
 
-        f.write(f"\nOptimal run: {best_run}\n\n")
+        f.write(f"\nSuggested run: {best_run}\n\n")
 
         # -------------------------
         # Overall ranking
@@ -173,7 +173,7 @@ def main():
         # -------------------------
         # Per-sample breakdown for best run
         # -------------------------
-        f.write(f"Per-sample scores for optimal run ({best_run}):\n")
+        f.write(f"Per-sample scores for suggested run ({best_run}):\n")
         f.write("-" * 40 + "\n")
 
         best_run_samples = (
