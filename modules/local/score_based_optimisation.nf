@@ -19,7 +19,7 @@ process SCORE_BASED_OPTIMISATION {
 
     script:
     """
-    score_based_optimisation.py -i $table -m $metadata --metrics retained_reads_percent shannon_Genus rep_similarity --metric_directions + + + --metric_weights 1 1 1
+    score_based_optimisation.py -i $table -m $metadata --metrics retained_reads_percent shannon_Genus rep_similarity --metric_directions + + + --metric_weights 0.5 1 0
     """
 
 }
