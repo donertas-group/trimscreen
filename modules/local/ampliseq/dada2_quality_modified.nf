@@ -7,37 +7,21 @@ process DADA2_QUALITY {
         'https://depot.galaxyproject.org/singularity/bioconductor-dada2:1.30.0--r43hf17093f_0' :
         'biocontainers/bioconductor-dada2:1.30.0--r43hf17093f_0' }"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/QC",
+    publishDir "${params.outdir}/dada2_general/QC",
         mode: params.publish_dir_mode,
         pattern: "*{.pdf,plotQualityProfile.txt}",
-        enabled: params.publish_all_runs
+        enabled: params.add_quality_based_trimming
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/QC/svg",
+    publishDir "${params.outdir}/dada2_general/QC/svg",
         mode: params.publish_dir_mode,
         pattern: "*.svg",
-        enabled: params.publish_all_runs
+        enabled: params.add_quality_based_trimming
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/args",
+    publishDir "${params.outdir}/dada2_general/args",
         mode: params.publish_dir_mode,
         pattern: "*.args.txt",
-        enabled: params.publish_all_runs
+        enabled: params.add_quality_based_trimming
 
-    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/QC",
-        mode: params.publish_dir_mode,
-        pattern: "*{.pdf,plotQualityProfile.txt}",
-        enabled: "${meta.is_best_run}"
-
-    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/QC/svg",
-        mode: params.publish_dir_mode,
-        pattern: "*.svg",
-        enabled: "${meta.is_best_run}"
-
-    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/args",
-        mode: params.publish_dir_mode,
-        pattern: "*.args.txt",
-        enabled: "${meta.is_best_run}"
-
-    input:
     input:
     tuple val(meta), path(reads)
 
