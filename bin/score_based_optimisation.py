@@ -16,7 +16,7 @@ LAMBDA = 0.5  # variance penalty weight
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Find the best run across samples")
-    parser.add_argument("-i", "--input", required=True, help="filtered_table_csv")
+    parser.add_argument("-i", "--input", required=True, help="sample summary table csv")
     parser.add_argument("-m", "--metadata", required=False,
                         help="Optional metadata tsv table (currently not used for filtering)")
     parser.add_argument("--metrics", required=True, nargs="+",
