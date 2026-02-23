@@ -129,6 +129,13 @@ tax_agglom_max = params.tax_agglom_max
 // Set non-params Variables
 single_end = false
 
+if ( params.add_quality_based_trimming && !single_end && !params.input_fasta ) {
+    //find_truncation_values = true
+    log.warn "`add_quality_based_trimming` is set to true. A run will be included where reads are truncated where median quality drops below ${params.trunc_qmin} (defined by `--trunc_qmin`) but at least a fraction of ${params.trunc_rmin} (defined by `--trunc_rmin`) of the reads will be retained.\nThe chosen cutoffs do not account for required overlap for merging, therefore DADA2 might have poor merging efficiency or even fail.\n"
+} //else { find_truncation_values = false }
+
+
+
 //use custom taxlevels from --dada_assign_taxlevels or database specific taxlevels if specified in conf/ref_databases.config
 if ( params.dada_ref_taxonomy ) {
     taxlevels = params.dada_assign_taxlevels ? "${params.dada_assign_taxlevels}" :
@@ -241,6 +248,7 @@ include { FILTER_CLUSTERS               } from '../../../modules/ampliseq/filter
 include { PARSE_INPUT                   } from '../../../subworkflows/local/ampliseq/parse_input'
 include { CUTADAPT_WORKFLOW             } from '../../../subworkflows/local/ampliseq/cutadapt_workflow_modified'
 include { DADA2_PREPROCESSING           } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
+include { DADA2_PREPROCESSING as DADA2_PREPROCESSING_Q       } from '../../../subworkflows/local/ampliseq/dada2_preprocessing_modified'
 include { DADA2_TAXONOMY_WF             } from '../../../subworkflows/local/ampliseq/dada2_taxonomy_wf'
 include { PHYLOSEQ_WORKFLOW             } from '../../../subworkflows/local/ampliseq/phyloseq_workflow_modified'
 
@@ -361,17 +369,17 @@ workflow AMPLISEQ_SIMPLIFIED {
     //
     // MODULE: Cutadapt
     //
-    RENAME_RAW_DATA_FILES.out.fastq
+    /*RENAME_RAW_DATA_FILES.out.fastq
         .combine(ch_params)
         .map { meta, reads, runID, trunclenf, trunclenr, is_best_run -> 
         def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr, is_best_run: is_best_run]  
         tuple(new_meta, reads)}
-        .set{ ch_renamed_w_params }
+        .set{ ch_renamed_w_params}*/
 
 
     if (!params.skip_cutadapt) {
         CUTADAPT_WORKFLOW (
-            ch_renamed_w_params,//RENAME_RAW_DATA_FILES.out.fastq,
+            RENAME_RAW_DATA_FILES.out.fastq,//ch_renamed_w_params,
             false, //replacing params.illumina_pe_its,
             false //replacing params.double_primer
         ).reads.set { ch_trimmed_reads }
@@ -379,20 +387,49 @@ workflow AMPLISEQ_SIMPLIFIED {
         ch_multiqc_files = ch_multiqc_files.mix(CUTADAPT_WORKFLOW.out.logs.collect{it[1]})
         ch_versions = ch_versions.mix(CUTADAPT_WORKFLOW.out.versions)
     } else {
-        ch_trimmed_reads = ch_renamed_w_params
+        ch_trimmed_reads = RENAME_RAW_DATA_FILES.out.fastq//ch_renamed_w_params
     }
 
+    // Add truncation values as params for later screening
+    ch_trimmed_reads
+        .combine(ch_params)
+        .map { meta, reads, runID, trunclenf, trunclenr, is_best_run ->
+               def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, 
+                                       trunclenf: trunclenf, trunclenr: trunclenr, is_best_run: is_best_run]
+               tuple(new_meta, reads)}
+        .set{ ch_trimmed_w_meta }
 
+//ch_trimmed_w_params.view()
     //
     // SUBWORKFLOW: Read preprocessing & QC plotting with DADA2
     //
     DADA2_PREPROCESSING (
-        ch_trimmed_reads, 
+        ch_trimmed_w_meta, 
         false, // replacing single_end
         false // replacing find_truncation_values
         //trunclenr
         //trunclenr
     ).reads.set { ch_filt_reads }
+//ch_filt_reads.view()
+
+    if (params.add_quality_based_trimming) {//&& should not run when rerunning with all samples
+        ch_trimmed_reads
+            .map { meta, reads -> 
+            def new_meta = meta + [ sample: meta.id, runID: "run_qbased", run: "run_qbased", is_best_run: false]
+            tuple(new_meta, reads)}
+            .set{ ch_trimmed_w_qparams }
+
+
+        DADA2_PREPROCESSING_Q (
+            ch_trimmed_w_qparams,
+            false, // replacing single_end
+            params.add_quality_based_trimming, // replacing find_truncation_values
+            //trunclenr
+            //trunclenr
+        ).reads.set { ch_filt_reads_q }
+        ch_filt_reads = ch_filt_reads.mix(ch_filt_reads_q)
+    }
+
 
     ch_versions = ch_versions.mix(DADA2_PREPROCESSING.out.versions) 
     

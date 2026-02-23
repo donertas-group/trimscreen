@@ -2,10 +2,10 @@
  * Preprocessing with DADA2
  */
 
-include { DADA2_QUALITY as DADA2_QUALITY1 } from '../../../modules/local/ampliseq/dada2_quality'
+include { DADA2_QUALITY as DADA2_QUALITY1 } from '../../../modules/local/ampliseq/dada2_quality_modified'
 include { TRUNCLEN                        } from '../../../modules/local/ampliseq/trunclen'
 include { DADA2_FILTNTRIM                 } from '../../../modules/local/ampliseq/dada2_filtntrim'
-include { DADA2_QUALITY as DADA2_QUALITY2 } from '../../../modules/local/ampliseq/dada2_quality'
+include { DADA2_QUALITY as DADA2_QUALITY2 } from '../../../modules/local/ampliseq/dada2_quality_modified'
 
 workflow DADA2_PREPROCESSING {
     take:
@@ -42,20 +42,20 @@ workflow DADA2_PREPROCESSING {
     }
 
     ch_DADA2_QUALITY1_SVG = Channel.empty()
-    if ( false ){//!params.skip_dada_quality ) {
+    //if ( false ){//!params.skip_dada_quality ) {
+    if ( find_truncation_values ) {
         DADA2_QUALITY1 ( ch_all_trimmed_reads.dump(tag: 'into_dada2_quality') )
         ch_versions_dada2_preprocessing = ch_versions_dada2_preprocessing.mix(DADA2_QUALITY1.out.versions)
         DADA2_QUALITY1.out.warning.subscribe { if ( it.baseName.toString().startsWith("WARNING") ) log.warn it.baseName.toString().replace("WARNING ","DADA2_QUALITY1: ") }
         ch_DADA2_QUALITY1_SVG = DADA2_QUALITY1.out.svg
-    }
 
     //find truncation values in case they are not supplied
-    /*if ( false){//find_truncation_values ) {
         TRUNCLEN ( DADA2_QUALITY1.out.tsv )
         TRUNCLEN.out.trunc
             .toSortedList()
             .set { ch_trunc }
         ch_versions_dada2_preprocessing = ch_versions_dada2_preprocessing.mix(TRUNCLEN.out.versions.first())
+
         //add one more warning or reminder that trunclenf and trunclenr were chosen automatically
         ch_trunc.subscribe {
             if ( "${it[0][1]}".toInteger() + "${it[1][1]}".toInteger() <= 10 ) { log.warn "`--trunclenf` was set to ${it[0][1]} and `--trunclenr` to ${it[1][1]}, this is too low! Please either change `--trunc_qmin` (and `--trunc_rmin`), or set `--trunclenf` and `--trunclenr`." }
@@ -63,22 +63,29 @@ workflow DADA2_PREPROCESSING {
             else if ( "${it[1][1]}".toInteger() <= 10 ) { log.warn "`--trunclenr` was set to ${it[1][1]}, this is too low! Please either change `--trunc_qmin` (and `--trunc_rmin`), or set `--trunclenf` and `--trunclenr`." }
             else log.warn "Probably everything is fine, but this is a reminder that `--trunclenf` was set automatically to ${it[0][1]} and `--trunclenr` to ${it[1][1]}. If this doesnt seem reasonable, then please change `--trunc_qmin` (and `--trunc_rmin`), or set `--trunclenf` and `--trunclenr` directly."
         }
+
+        ch_trimmed_reads
+            .combine(ch_trunc)
+            .map{ meta, reads, fw, rv -> 
+                  def new_meta = meta + [run: "run_${fw[1]}${rv[1]}", runID: "run_${fw[1]}${rv[1]}", 
+                                         id: "${meta.sample}.run_${fw[1]}${rv[1]}", 
+                                         trunclenf: fw[1], trunclenr: rv[1]] 
+                  tuple(new_meta, reads, fw, rv)}
+            .set { ch_trimmed_reads_w_params }
+
     } else {
-        Channel.fromList( [['FW', trunclenf], ['RV', trunclenr]] )
+
+        ch_trimmed_reads
+            .map{ meta, reads -> [meta, reads, ['FW', meta.trunclenf], ['RV', meta.trunclenr]]}
+            .set {ch_trimmed_reads_w_params}
+
+        /*Channel.fromList( [['FW', trunclenf], ['RV', trunclenr]] )
             .toSortedList()
-            .set { ch_trunc }
+            .set { ch_trunc }*/
     }
 
-
-    ch_trimmed_reads.combine(ch_trunc).set { ch_trimmed_reads }
-*/
-
-    ch_trimmed_reads
-        .map{ meta, reads -> [meta, reads, ['FW', meta.trunclenf], ['RV', meta.trunclenr]]}
-        .set {ch_trimmed_reads}
-
     //filter reads
-    DADA2_FILTNTRIM ( ch_trimmed_reads.dump(tag: 'into_filtntrim')  )
+    DADA2_FILTNTRIM ( ch_trimmed_reads_w_params.dump(tag: 'into_filtntrim')  )
     ch_versions_dada2_preprocessing = ch_versions_dada2_preprocessing.mix(DADA2_FILTNTRIM.out.versions.first())
 
     //Filter empty files
@@ -125,7 +132,7 @@ workflow DADA2_PREPROCESSING {
  //  ch_dada2_filtntrim_results_passed.view()
     ch_dada2_filtntrim_results_passed = ch_dada2_filtntrim_results.success
 
-
+ch_dada2_filtntrim_results_passed.view()
     // Break apart the reads and logs so that only the samples
     // which pass filtering are retained
     ch_dada2_filtntrim_results_passed
