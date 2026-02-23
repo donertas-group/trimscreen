@@ -333,10 +333,10 @@
             }
         },
         "screening_parameter_input": {
-            "title": "Downstream pipeline samplesheet generation options",
+            "title": "Parameters related to screening of different trimming lengths",
             "type": "object",
             "fa_icon": "fas fa-university",
-            "description": "Options for generating input samplesheets for complementary downstream pipelines.",
+            "description": "Parameters related to screening of different trimming lengths.",
             "properties": {
                 "trunclenf_range": {
                     "type": "string",
@@ -363,7 +363,14 @@
                 "read_length": {
                     "type": "integer",
                     "default": 250,
-                    "description": "Read length in raw fastq files."}}},   
+                    "description": "Read length in raw fastq files."},   
+                "add_quality_based_trimming": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "If trimming based on only read base quality (default of ampliseq when trunclenf/r are not provided) should be included as one of the runs"
+                }
+              }
+             },
         "sequencing_input": {
             "title": "Sequencing input",
             "type": "object",
