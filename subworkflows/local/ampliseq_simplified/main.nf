@@ -399,7 +399,6 @@ workflow AMPLISEQ_SIMPLIFIED {
                tuple(new_meta, reads)}
         .set{ ch_trimmed_w_meta }
 
-//ch_trimmed_w_params.view()
     //
     // SUBWORKFLOW: Read preprocessing & QC plotting with DADA2
     //
@@ -410,12 +409,11 @@ workflow AMPLISEQ_SIMPLIFIED {
         //trunclenr
         //trunclenr
     ).reads.set { ch_filt_reads }
-//ch_filt_reads.view()
 
     if (params.add_quality_based_trimming) {//&& should not run when rerunning with all samples
         ch_trimmed_reads
             .map { meta, reads -> 
-            def new_meta = meta + [ sample: meta.id, runID: "run_qbased", run: "run_qbased", is_best_run: false]
+            def new_meta = meta + [ sample: meta.id, runID: "run_qualitybased", run: "run_qualitybased", is_best_run: false]
             tuple(new_meta, reads)}
             .set{ ch_trimmed_w_qparams }
 

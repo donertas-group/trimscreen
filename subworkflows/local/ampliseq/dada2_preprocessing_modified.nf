@@ -67,7 +67,7 @@ workflow DADA2_PREPROCESSING {
         ch_trimmed_reads
             .combine(ch_trunc)
             .map{ meta, reads, fw, rv -> 
-                  def new_meta = meta + [run: "run_${fw[1]}${rv[1]}", runID: "run_${fw[1]}${rv[1]}", 
+                  def new_meta = meta + [run: "${meta.run}_${fw[1]}${rv[1]}", runID: "${meta.runID}_${fw[1]}${rv[1]}", 
                                          id: "${meta.sample}.run_${fw[1]}${rv[1]}", 
                                          trunclenf: fw[1], trunclenr: rv[1]] 
                   tuple(new_meta, reads, fw, rv)}
@@ -129,10 +129,8 @@ workflow DADA2_PREPROCESSING {
         .flatMap {it}
         .set { ch_dada2_filtntrim_results_passed }       
 */  
- //  ch_dada2_filtntrim_results_passed.view()
     ch_dada2_filtntrim_results_passed = ch_dada2_filtntrim_results.success
 
-ch_dada2_filtntrim_results_passed.view()
     // Break apart the reads and logs so that only the samples
     // which pass filtering are retained
     ch_dada2_filtntrim_results_passed
