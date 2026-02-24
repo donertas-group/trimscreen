@@ -1,4 +1,4 @@
-process MERGE_RUN_SUMMARIES {
+process MERGE_SUMMARIES {
     tag "merge"
     label "process_single"
 
@@ -12,13 +12,13 @@ process MERGE_RUN_SUMMARIES {
     val suffix
 
     output:
-    path "sample_run_summaries${suffix}.csv" , emit: csv
+    path "summaries${suffix}.csv" , emit: csv
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
     """
-    merge_summaries.py -i $stats -o sample_run_summaries${suffix}.csv
+    merge_summaries.py -i $stats -o summaries${suffix}.csv
     """
 }
