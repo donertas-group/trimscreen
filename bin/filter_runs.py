@@ -12,15 +12,15 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Filter runs and output table.")
     parser.add_argument("-i", "--input", required=True, help="Input table")
     parser.add_argument("-o", "--output", required=True, help="Output table")
-    parser.add_argument("-r", "--lowest_relative_retention", type=float, default=0.8)
+    parser.add_argument("-r", "--lowest_relative_retention", type=float, default=0.5)
     parser.add_argument("-n", "--min_reads", type=int, default=2000)
 
     return parser.parse_args()
 
 def find_good_runs(
     df: pd.DataFrame,
-    min_reads: int = 2000,
-    lowest_relative_retention: float = 0.8,
+    min_reads: int,
+    lowest_relative_retention: float,
 ) -> List[str]:
     """
     Return runs where:
