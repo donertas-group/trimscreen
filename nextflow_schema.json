@@ -368,9 +368,13 @@
                     "type": "boolean",
                     "default": false,
                     "description": "If trimming based on only read base quality (default of ampliseq when trunclenf/r are not provided) should be included as one of the runs"
-                }
+                },
+                "compare_rarefied_runs": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "If suggestion is based on comparing runs where each sample-run is rarefied to the lowest read number per sample among the filtered runs."
               }
-             },
+             }},
         "sequencing_input": {
             "title": "Sequencing input",
             "type": "object",
