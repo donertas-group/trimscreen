@@ -24,7 +24,6 @@ workflow CUTADAPT_WORKFLOW {
             info, log ->
                 def meta = [:]
                 meta.single_end = info.single_end
-                meta.runID = info.runID // add runID to meta
                 [ meta, log ] }
         .groupTuple(by: 0 )
         .set { ch_cutadapt_logs }
