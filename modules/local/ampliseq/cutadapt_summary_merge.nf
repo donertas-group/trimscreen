@@ -7,16 +7,6 @@ process CUTADAPT_SUMMARY_MERGE {
         'https://depot.galaxyproject.org/singularity/bioconductor-dada2:1.30.0--r43hf17093f_0' :
         'biocontainers/bioconductor-dada2:1.30.0--r43hf17093f_0' }"
 
-    publishDir "${params.outdir}/cutadapt",
-        mode: params.publish_dir_mode,
-        saveAs: { filename -> filename == 'versions.yml' ? null : filename },
-        enabled: params.publish_all_runs
-
-    publishDir "${params.outdir}/cutadapt",
-        mode: params.publish_dir_mode,
-        saveAs: { filename -> filename == 'versions.yml' ? null : filename },
-        enabled: "${meta.is_best_run}"
-
     input:
     val(action)
     tuple val(meta), path(files)
