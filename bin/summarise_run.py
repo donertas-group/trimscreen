@@ -9,217 +9,253 @@ from skbio import diversity
 from scipy.spatial.distance import pdist, squareform
 import logging
 
+
 def parse_args(args=None):
     parser = argparse.ArgumentParser(
-        description="Compare runs. Create table from multiple files."
+        description="Compare runs and compute per-sample and per-run summaries including beta diversity."
     )
-    parser.add_argument(
-        "-i", "--input", nargs="+", required=True, help="Input files"
-    )
-    parser.add_argument(
-        "-m",
-        "--metadata",
-        required=False,
-        help="Optional metadata tsv table with same format as required by nf-core/ampliseq",
-    )
+    parser.add_argument("-i", "--input", nargs=4, required=True,
+                        help="summary_file asv_file tax_file run_name")
+    parser.add_argument("-m", "--metadata", required=False, help="Metadata CSV with columns: sampleID, replicated, replicated_sampleID")
     return parser.parse_args()
 
-def ruzicka_distance(x, y):
-    num = np.minimum(x, y).sum()
-    den = np.maximum(x, y).sum()
-    if den == 0:
-        return 0.0  # identical zero vectors
-    return 1.0 - (num / den)
 
-def calculate_mean_similarity(asv_table, rep_samples):
-    """
-    asv_table: ASVs x samples count table
-    rep_samples: list of replicate sample IDs (columns)
-    """
-
-    if len(rep_samples) < 2:
-        return None
-
-    # Subset to replicates and drop ASVs with zero counts across all reps
-    data = asv_table[rep_samples]
-    data = data.loc[data.sum(axis=1) > 0]
-
-    # calculate relative abundance
-    data = data.div(data.sum(axis=0), axis=1)
-    
-    # Transpose: samples as rows, ASVs as columns
-    data_T = data.T
-
-    # Pairwise Ruzicka distances
-    dist_matrix = pdist(data_T.values, metric=ruzicka_distance)
-
-    # Convert to similarity
-    similarities = 1.0 - dist_matrix
-
-    return similarities.mean()
+def clr_transform(df, pseudocount=1e-6):
+    df = df + pseudocount
+    log_df = np.log(df)
+    gm = log_df.mean(axis=0)
+    clr = log_df.subtract(gm, axis=1)
+    return clr
 
 
-def process_run(
-    summary_file,
-    asv_file,
-    tax_file,
-    run,
-    classifier_dir,
-    ranks,
-    rep_samples,
-):
-    """
-    Process a single run directory to summarize ASV counts at specified taxonomic ranks.
+def calculate_beta_diversity(asv_table, metadata):
 
-    Returns:
-    - A DataFrame summarizing the proportion of identified ASVs and the number of
-      unique taxa at specified taxonomic ranks.
-    """
+    samples = asv_table.columns.tolist()
 
-    # Normalize rep_samples
-    rep_samples = [] if rep_samples is None else list(rep_samples)
+    # Keep only samples present in metadata
+    metadata = metadata.set_index("sampleID")
+    metadata = metadata.loc[metadata.index.intersection(samples)]
 
-    if (
-        os.path.exists(asv_file)
-        and os.path.exists(tax_file)
-        and os.path.exists(summary_file)
-    ):
-        asv_tax = pd.read_csv(tax_file, sep="\t", index_col=0)
-        asv_table = pd.read_csv(asv_file, sep="\t", index_col=0)
-        summary_table = pd.read_csv(summary_file, sep="\t", index_col=0)
-    else:
-        logging.warning(
-            f"{classifier_dir}, ASV_table.tsv.gz, ASV_tax_*.tsv.gz "
-            f"or overall_summary.tsv.gz not found in {run}"
-        )
-        return
+    if len(metadata) < 3:
+        return None  # too few samples
 
-    # Merge ASV and taxonomy tables
+    # Determine biological groups
+    metadata["replicated"] = metadata["replicated"].astype(str).str.lower() == "true"
+
+    metadata["bio_group"] = np.where(
+        metadata["replicated"],
+        metadata["replicated_sampleID"],
+        metadata.index
+    )
+
+    # Count groups
+    group_counts = metadata["bio_group"].value_counts()
+
+    n_samples = len(metadata)
+    n_bio_groups = group_counts.shape[0]
+    n_replicated_samples = metadata["replicated"].sum()
+
+    # Require:
+    # - at least 2 biological groups
+    # - at least 1 group with >=2 replicates
+    valid_rep_groups = group_counts[group_counts >= 2]
+
+    if n_bio_groups < 2 or valid_rep_groups.shape[0] < 1:
+        return {
+            "n_samples": n_samples,
+            "n_replicated_samples": int(n_replicated_samples),
+            "n_biologically_different_samples": n_bio_groups,
+            "mean_within_replicate_dist": np.nan,
+            "mean_between_sample_dist": np.nan,
+            "between_within_ratio": np.nan,
+        }
+
+    # Subset ASV table
+    asv_table = asv_table[metadata.index]
+
+    # CLR transform
+    clr_table = clr_transform(asv_table)
+
+    # Distance matrix
+    dist_df = pd.DataFrame(
+        squareform(pdist(clr_table.T, metric="euclidean")),
+        index=clr_table.columns,
+        columns=clr_table.columns,
+    )
+
+    within = []
+    between = []
+
+    cols = dist_df.index.tolist()
+
+    for i, s1 in enumerate(cols):
+        g1 = metadata.loc[s1, "bio_group"]
+
+        for j in range(i + 1, len(cols)):
+            s2 = cols[j]
+            g2 = metadata.loc[s2, "bio_group"]
+
+            d = dist_df.loc[s1, s2]
+
+            if g1 == g2:
+                within.append(d)
+            else:
+                between.append(d)
+
+    mean_within = np.mean(within) if within else np.nan
+    mean_between = np.mean(between) if between else np.nan
+
+    ratio = (
+        mean_between / mean_within
+        if mean_within and mean_within > 0
+        else np.nan
+    )
+
+    return {
+        "n_samples": n_samples,
+        "n_replicated_samples": int(n_replicated_samples),
+        "n_biologically_different_samples": n_bio_groups,
+        "mean_within_replicate_dist": mean_within,
+        "mean_between_sample_dist": mean_between,
+        "between_within_ratio": ratio,
+    }
+
+
+# -----------------------------
+# Main processing
+# -----------------------------
+
+def process_run(summary_file, asv_file, tax_file, run, metadata):
+
+    if not (os.path.exists(asv_file)
+            and os.path.exists(tax_file)
+            and os.path.exists(summary_file)):
+        logging.warning(f"Missing files for run {run}")
+        return None, None
+
+    asv_tax = pd.read_csv(tax_file, sep="\t", index_col=0)
+    asv_table = pd.read_csv(asv_file, sep="\t", index_col=0)
+    summary_table = pd.read_csv(summary_file, sep="\t", index_col=0)
+
     merged_table = asv_table.merge(asv_tax, left_index=True, right_index=True)
 
-    results = {}
+    ranks = ["Phylum", "Family", "Genus", "Species"]
+    sample_results = {}
 
-    # Diversity metrics per rank
+    # -----------------------------
+    # Alpha diversity per rank
+    # -----------------------------
+
     for rank in ranks:
         if rank not in merged_table.columns:
-            logging.warning(f"Rank '{rank}' not found in the table. Skipping.")
             continue
 
-        ntaxa = []
-        nasv = []
         shannons = []
-        simpsons = []
 
         for sample in asv_table.columns:
-            valid_asvs = merged_table[
-                (merged_table[sample] > 0) & (merged_table[rank].notna()) & (merged_table[rank].astype(str).str.strip() != "")
+            valid = merged_table[
+                (merged_table[sample] > 0) &
+                (merged_table[rank].notna()) &
+                (merged_table[rank].astype(str).str.strip() != "")
             ]
 
-            nasv.append(valid_asvs[sample].count())
-            ntaxa.append(valid_asvs[rank].nunique())
+            rank_counts = valid.groupby(rank)[sample].sum()
 
-            rank_nreads = valid_asvs.groupby(rank)[sample].sum()
-
-            if rank_nreads.sum() > 0 and len(rank_nreads) > 1:
-                shannons.append(np.exp(diversity.alpha.shannon(rank_nreads)))
-                simpsons.append(np.exp(diversity.alpha.simpson(rank_nreads)))
+            if rank_counts.sum() > 0 and len(rank_counts) > 1:
+                sh = np.exp(diversity.alpha.shannon(rank_counts))
             else:
-                shannons.append(np.nan)
-                simpsons.append(np.nan)
+                sh = np.nan
 
-        results[rank] = ntaxa
-        results[f"{rank}_nasv"] = nasv
-        results[f"shannon_{rank}"] = shannons
-        results[f"simpson_{rank}"] = simpsons
+            shannons.append(sh)
 
+        sample_results[f"shannon_{rank}"] = shannons
+
+    # -----------------------------
     # Per-sample metrics
-    Nasvs = []
-    Nreads = []
+    # -----------------------------
 
-    samples = asv_table.columns.unique()
+    sample_results["nasvs"] = (
+        (asv_table > 0).sum(axis=0).tolist()
+    )
 
-    for sample in samples:
-        Nasvs.append(asv_table.loc[asv_table[sample] > 0, sample].count())
-        Nreads.append(asv_table.loc[asv_table[sample] > 0, sample].sum())
+    sample_results["nreads"] = (
+        asv_table.sum(axis=0).tolist()
+    )
 
-    # Replicate similarity (Genus only, intentional)
-    rep_sim = None
+    sam_df = pd.DataFrame(sample_results, index=asv_table.columns)
+    sam_df["run"] = run
 
-    replicates = list(set(rep_samples).intersection(samples))
-  
-    if len(replicates) >= 2:
-        rep_sim = calculate_mean_similarity(asv_table, replicates)
+    # Add DADA2 columns (remain per-sample for now)
+    sam_df["DADA2_input"] = summary_table["DADA2_input"].reindex(sam_df.index)
 
-    rep_similarity = [
-        rep_sim if sample in replicates else None
-        for sample in samples
-    ]
-
-    results["nasvs"] = Nasvs
-    results["nreads"] = Nreads
-    results["nasvs_in_run"] = (asv_table > 0).sum().tolist()
-    results["rep_similarity"] = rep_similarity
-
-    res_df = pd.DataFrame(results, index=asv_table.columns)
-    res_df["run"] = run
-
-    # Summary table metrics
     if "lenfilter_output" in summary_table.columns:
-        res_df["DADA2_input"] = summary_table["DADA2_input"].reindex(res_df.index)
-
-        res_df["retained_reads_percent"] = (
-            summary_table["lenfilter_output"].reindex(res_df.index)
-            / res_df["DADA2_input"].replace(0, np.nan)
-        )
+        retained = summary_table["lenfilter_output"]
     else:
-        res_df["DADA2_input"] = summary_table["DADA2_input"].reindex(res_df.index)
-        res_df["retained_reads_percent"] = (
-            summary_table["nonchim"].reindex(res_df.index)
-            / res_df["DADA2_input"].replace(0, np.nan)
-        )
+        retained = summary_table["nonchim"]
 
-    # Reorder columns (no 'sample' column; it's the index)
-    res_df = res_df[["run"] + [c for c in res_df.columns if c != "run"]]
+    sam_df["retained_reads_percent"] = (
+        retained.reindex(sam_df.index)
+        / sam_df["DADA2_input"].replace(0, np.nan)
+    )
 
-    return res_df
+    # -----------------------------
+    # Run-level summaries
+    # -----------------------------
 
+    run_summary = {
+        "run": run,
+        "nasvs": (asv_table > 0).any(axis=1).sum(),
+        "DADA2_input": sam_df["DADA2_input"].sum(),
+        "retained_reads_percent": retained.sum() / sam_df["DADA2_input"].replace(0, np.nan).sum()
+    }
+
+    # Beta diversity only if metadata provided
+    if metadata is not None:
+        beta_metrics = calculate_beta_diversity(asv_table, metadata)
+        if beta_metrics is not None:
+            run_summary.update(beta_metrics)
+
+    # Mean Shannon across ranks
+    for rank in ranks:
+        if rank not in merged_table.columns:
+            continue
+
+        run_summary[f"mean_Shannon_{rank}"] = sam_df[f"shannon_{rank}"].mean()
+
+    run_df = pd.DataFrame([run_summary])
+
+    return sam_df, run_df
+
+
+# -----------------------------
+# Main
+# -----------------------------
 
 def main():
     args = parse_args()
 
-    inputs = args.input
-    metadata_csv = args.metadata
+    summary_file, asv_file, tax_file, run = args.input
 
-    rep_samples = []
+    metadata = None
+    if args.metadata is not None:
+        metadata = pd.read_csv(args.metadata)
 
-    if metadata_csv is not None:
-        metadata = pd.read_csv(metadata_csv)
-        if "is_replicate" in metadata.columns:
-            rep_samples = metadata.loc[
-                metadata["is_replicate"]
-                .astype(str)
-                .str.lower()
-                == "true",
-                "sampleID",
-            ].tolist()
-
-    classifier_dir = "dada2"
-    Ranks_to_analyse = ["Phylum", "Family", "Genus", "Species"]
-
-    summary = process_run(
-        inputs[0],
-        inputs[1],
-        inputs[2],
-        inputs[3],
-        classifier_dir,
-        Ranks_to_analyse,
-        rep_samples,
+    sample_df, run_df = process_run(
+        summary_file,
+        asv_file,
+        tax_file,
+        run,
+        metadata
     )
 
-    summary.index.name = "sample"
-    summary.to_csv(f"{inputs[3]}_table.csv", sep=",", index=True)
+    if sample_df is None:
+        sys.exit(1)
+
+    sample_df.index.name = "sample"
+
+    sample_df.to_csv(f"{run}.samplerun_summary.csv", index=True)
+    run_df.to_csv(f"{run}.run_summary.csv", index=False)
 
 
 if __name__ == "__main__":
     sys.exit(main())
-

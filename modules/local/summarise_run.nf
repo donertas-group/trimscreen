@@ -12,7 +12,7 @@ process SUMMARISE_RUN {
     each path(metadata)
 
     output:
-    tuple val(meta), path("${meta.run}_table.csv"), emit: csv
+    tuple val(meta), path("${meta.run}.samplerun_summary.csv"), path("${meta.run}.run_summary.csv"), emit: csv
     path "versions.yml"   , emit: versions
 
     when:
