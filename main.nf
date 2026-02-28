@@ -76,7 +76,7 @@ workflow {
         params.outdir,
         params.monochrome_logs,
         params.hook_url,
-        DONERTASGROUP_TRIMSCREEN.out.multiqc_report
+        TRIMSCREEN.out.multiqc_report
     )*/
 }
 
