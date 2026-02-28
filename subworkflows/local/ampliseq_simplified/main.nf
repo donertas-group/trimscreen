@@ -369,14 +369,6 @@ workflow AMPLISEQ_SIMPLIFIED {
     //
     // MODULE: Cutadapt
     //
-    /*RENAME_RAW_DATA_FILES.out.fastq
-        .combine(ch_params)
-        .map { meta, reads, runID, trunclenf, trunclenr, is_best_run -> 
-        def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, trunclenf: trunclenf, trunclenr: trunclenr, is_best_run: is_best_run]  
-        tuple(new_meta, reads)}
-        .set{ ch_renamed_w_params}*/
-
-
     if (!params.skip_cutadapt) {
         CUTADAPT_WORKFLOW (
             RENAME_RAW_DATA_FILES.out.fastq,//ch_renamed_w_params,
@@ -410,13 +402,15 @@ workflow AMPLISEQ_SIMPLIFIED {
         //trunclenr
     ).reads.set { ch_filt_reads }
 
+
+    // When including quality based trimming
+
     if (params.add_quality_based_trimming) {//&& should not run when rerunning with all samples
         ch_trimmed_reads
             .map { meta, reads -> 
             def new_meta = meta + [ sample: meta.id, runID: "run_qualitybased", run: "run_qualitybased", is_best_run: false]
             tuple(new_meta, reads)}
             .set{ ch_trimmed_w_qparams }
-
 
         DADA2_PREPROCESSING_Q (
             ch_trimmed_w_qparams,
@@ -427,7 +421,6 @@ workflow AMPLISEQ_SIMPLIFIED {
         ).reads.set { ch_filt_reads_q }
         ch_filt_reads = ch_filt_reads.mix(ch_filt_reads_q)
     }
-
 
     ch_versions = ch_versions.mix(DADA2_PREPROCESSING.out.versions) 
     
@@ -519,7 +512,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     ch_versions = ch_versions.mix(DADA2_MERGE.out.versions)
 
     //merge cutadapt_summary and dada_stats files. modified: write summary files separately by runs
-    if (!params.skip_cutadapt) {
+    if (false){//!params.skip_cutadapt) {
         MERGE_STATS_STD (
             CUTADAPT_WORKFLOW.out.summary, 
             DADA2_MERGE.out.dada2stats )//.map { meta, dada2stats -> tuple(meta, dada2stats) }) // dada2stats is modified to contain meta as well
