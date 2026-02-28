@@ -12,13 +12,13 @@ process FILTER_RUNS {
     val suffix
 
     output:
-    tuple stdout, path("sample_run_summaries${suffix}.csv"), emit: filtered
+    tuple stdout, path("samplerun_summaries${suffix}.csv"), emit: filtered
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
     """
-    filter_runs.py -i $table -o sample_run_summaries${suffix}.csv
+    filter_runs.py -i $table -o samplerun_summaries${suffix}.csv
     """
 }

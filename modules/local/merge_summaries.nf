@@ -9,16 +9,16 @@ process MERGE_SUMMARIES {
 
     input:
     path stats
-    val prefix
+    val filename
 
     output:
-    path "${prefix}_summaries.csv" , emit: csv
+    path "${filename}.csv" , emit: csv
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
     """
-    merge_summaries.py -i $stats -o ${prefix}_summaries.csv
+    merge_summaries.py -i $stats -o ${filename}.csv
     """
 }
