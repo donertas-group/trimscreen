@@ -143,15 +143,18 @@ workflow AMPLISEQ_SCREENING {
     // Run simplified version of ampliseq
     AMPLISEQ_SIMPLIFIED(ch_samplesheet_subset, ch_params)
 
+    ch_runs_summary = AMPLISEQ_SIMPLIFIED.out.runs_summary
+    ch_runs_asv_table = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
+    ch_runs_asv_tax = AMPLISEQ_SIMPLIFIED.out.runs_asv_tax
  
     //
     // SUBWORKFLOW: Compare runs 
     //
     if (!params.skip_run_comparison) {
         COMPARE_RUNS ( 
-            AMPLISEQ_SIMPLIFIED.out.runs_summary, 
-            AMPLISEQ_SIMPLIFIED.out.runs_asv_table, 
-            AMPLISEQ_SIMPLIFIED.out.runs_asv_tax 
+            ch_runs_summary, 
+            ch_runs_asv_table, 
+            ch_runs_asv_tax 
         )
 
         // Process comparison results to identify best run
@@ -162,22 +165,22 @@ workflow AMPLISEQ_SCREENING {
             .set{ ch_best_run }
 
         // Filter outputs to get best run data
-        AMPLISEQ_SIMPLIFIED.out.runs_asv_table
+        ch_runs_asv_table
             .map { meta, file -> [meta.runID, meta, file] }
             .join( ch_best_run.map { runID -> [runID, true] }, by: 0)
             .map { runID, meta, file, _ -> [meta, file] }
             .set { ch_best_tsv }
 
-        AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
+       /* AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
             .map { meta, file -> [meta.runID, meta, file] }
             .join( ch_best_run.map { runID -> [runID, true] }, by: 0)
             .map { runID, meta, file, _ -> [meta, file] }
-            .set { ch_best_fasta }
+            .set { ch_best_fasta }*/
 
     } else {
         // If comparison is skipped, output all runs
-        ch_best_tsv = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
-        ch_best_fasta = AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
+        ch_best_tsv = ch_runs_asv_table
+        //ch_best_fasta = AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
         ch_best_run = Channel.empty()
     }
 
@@ -208,7 +211,7 @@ workflow AMPLISEQ_SCREENING {
         
         // Update the output channels to use the second run's outputs
         ch_best_tsv = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_table
-        ch_best_fasta = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_fasta
+        //ch_best_fasta = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_fasta
     
     }
 
