@@ -129,7 +129,7 @@ tax_agglom_max = params.tax_agglom_max
 // Set non-params Variables
 single_end = false
 
-if ( params.add_quality_based_trimming && !single_end && !params.input_fasta ) {
+if ( params.add_quality_based_trimming && !single_end){// && !params.input_fasta ) {
     //find_truncation_values = true
     log.warn "`add_quality_based_trimming` is set to true. A run will be included where reads are truncated where median quality drops below ${params.trunc_qmin} (defined by `--trunc_qmin`) but at least a fraction of ${params.trunc_rmin} (defined by `--trunc_rmin`) of the reads will be retained.\nThe chosen cutoffs do not account for required overlap for merging, therefore DADA2 might have poor merging efficiency or even fail.\n"
 } //else { find_truncation_values = false }
@@ -293,7 +293,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     //
     ch_versions = Channel.empty()
     ch_multiqc_files = Channel.empty()
-    ch_input_fasta = Channel.empty()
+    //ch_input_fasta = Channel.empty()
 
 
     ch_input_reads = ch_samplesheet
