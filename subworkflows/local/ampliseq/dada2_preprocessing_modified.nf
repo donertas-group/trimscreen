@@ -66,11 +66,18 @@ workflow DADA2_PREPROCESSING {
 
         ch_trimmed_reads
             .combine(ch_trunc)
-            .map{ meta, reads, fw, rv -> 
-                  def new_meta = meta + [run: "${meta.run}_${fw[1]}${rv[1]}", runID: "${meta.runID}_${fw[1]}${rv[1]}", 
-                                         id: "${meta.sample}.run_${fw[1]}${rv[1]}", 
-                                         trunclenf: fw[1], trunclenr: rv[1]] 
-                  tuple(new_meta, reads, fw, rv)}
+            .map { meta, reads, fw, rv ->
+                def fw_formatted = String.format('%03d', fw[1])
+                def rv_formatted = String.format('%03d', rv[1])
+                def new_meta = meta + [
+                    run: "${meta.run}_${fw_formatted}${rv_formatted}",
+                    runID: "${meta.runID}_${fw_formatted}${rv_formatted}",
+                    id: "${meta.sample}.run_${fw_formatted}${rv_formatted}",
+                    trunclenf: fw[1],
+                    trunclenr: rv[1]
+                ]
+                tuple(new_meta, reads, fw, rv)
+            }
             .set { ch_trimmed_reads_w_params }
 
     } else {
