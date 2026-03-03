@@ -9,12 +9,12 @@ process SUMMARISE_RUN {
 
     publishDir "${params.outdir}/runs/${meta.runID}",
         mode: "$params.publish_dir_mode",
-        pattern: "*.args.txt",
+        pattern: "*.csv",
         enabled: params.publish_all_runs
 
     publishDir "${params.outdir}/best_run/${meta.runID}",
         mode: "$params.publish_dir_mode",
-        pattern: "*.args.txt",
+        pattern: "*.csv",
         enabled: "${meta.is_best_run}"
 
 
