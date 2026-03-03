@@ -67,8 +67,8 @@ workflow DADA2_PREPROCESSING {
         ch_trimmed_reads
             .combine(ch_trunc)
             .map { meta, reads, fw, rv ->
-                def fw_formatted = String.format('%03d', fw[1])
-                def rv_formatted = String.format('%03d', rv[1])
+                def fw_formatted = String.format('%03d', fw[1] as Integer)
+                def rv_formatted = String.format('%03d', rv[1] as Integer)
                 def new_meta = meta + [
                     run: "${meta.run}_${fw_formatted}${rv_formatted}",
                     runID: "${meta.runID}_${fw_formatted}${rv_formatted}",
