@@ -253,8 +253,8 @@ def main():
 
     sample_df.index.name = "sample"
 
-    sample_df.to_csv(f"{run}.samplerun_summary.csv", index=True)
-    run_df.to_csv(f"{run}.run_summary.csv", index=False)
+    sample_df.to_csv(f"samplerun_summary.csv", index=True)
+    run_df.to_csv(f"run_summary.csv", index=False)
 
 
 if __name__ == "__main__":
