@@ -62,12 +62,12 @@ workflow AMPLISEQ_SCREENING {
     ch_params = GENERATE_PARAMS.out.params_csv
         .splitCsv(header: true, sep: ',')
         .map { row -> 
-            def is_best_run = false // initiallise is_best_run to false
-            return tuple(row.runID, row.trunclenf, row.trunclenr, is_best_run) } 
+            def run_type = "screened" // initiallise run_type to "screened"
+            return tuple(row.run, row.trunclenf, row.trunclenr, run_type) } 
 
     // Subset samples 
     ch_is_best_run = ch_params
-        .map { runID, trunclenf, trunclenr, is_best_run -> is_best_run }
+        .map { run, trunclenf, trunclenr, run_type -> run_type }
         .unique()
 
     subset_samples = params.subset_samples ?: false
@@ -78,14 +78,15 @@ workflow AMPLISEQ_SCREENING {
             .map { meta, read1, read2 -> [meta.id, [meta, read1, read2]] }
             .join (ch_metadata_samples)
             .map { id, tuple, replicated -> [tuple, replicated] }            
-    }
-    else { ch_samplesheet_samples = ch_samplesheet.map { tuple -> [tuple, false] } 
+    
+    } else {     
+        ch_samplesheet_samples = ch_samplesheet.map { tuple -> [tuple, false] } 
     }
 
     ch_samplesheet_subset = ch_samplesheet_samples.collect()
         .combine (ch_is_best_run)
         .map { tuple ->
-            def is_best_run = tuple[-1]
+            def run_type = tuple[-1]
             def all_items = tuple[0..-2].collate(2)
 
             // DEBUG: Check the structure
@@ -93,7 +94,7 @@ workflow AMPLISEQ_SCREENING {
             //log.info "DEBUG: first item = ${all_items[0]}"
             //log.info "DEBUG: first item class = ${all_items[0].getClass()}"
 
-            if (subset_samples && !is_best_run) {
+            if (subset_samples && run_type == "screened" ) {
                 // Sort so replicates come first, then shuffle within each group
                 def replicates = all_items.findAll { item -> item[1] }.collect { item -> item[0] }.shuffled()
                 def non_replicates = all_items.findAll { item -> !item[1] }.collect { item -> item[0] }.shuffled()
@@ -166,21 +167,15 @@ workflow AMPLISEQ_SCREENING {
 
         // Filter outputs to get best run data
         ch_runs_asv_table
-            .map { meta, file -> [meta.runID, meta, file] }
-            .join( ch_best_run.map { runID -> [runID, true] }, by: 0)
-            .map { runID, meta, file, _ -> [meta, file] }
+            .map { meta, file -> [meta.run, meta, file] }
+            .join( ch_best_run.map { run -> [run, "suggested"] }, by: 0)
+            .map { run, meta, file, _ -> [meta, file] }
             .set { ch_best_tsv }
 
-       /* AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
-            .map { meta, file -> [meta.runID, meta, file] }
-            .join( ch_best_run.map { runID -> [runID, true] }, by: 0)
-            .map { runID, meta, file, _ -> [meta, file] }
-            .set { ch_best_fasta }*/
 
     } else {
         // If comparison is skipped, output all runs
         ch_best_tsv = ch_runs_asv_table
-        //ch_best_fasta = AMPLISEQ_SIMPLIFIED.out.runs_asv_fasta
         ch_best_run = Channel.empty()
     }
 
@@ -198,12 +193,12 @@ workflow AMPLISEQ_SCREENING {
 
     } else if (!params.skip_run_comparison) {
 
-        // Create updated metadata channel with is_best_run = true for best runs
+        // Create updated metadata channel with run_type = "suggested" for best runs
         ch_best_run_annotated = ch_best_run
-        .map { runID -> [runID, true] }        
+            .map { run -> [run, "suggested"] }        
 
         ch_params_best = ch_params
-            .map {runID, trunclenf, trunclenr, is_best_run -> [runID, trunclenf, trunclenr] }
+            .map {run, trunclenf, trunclenr, run_type -> [run, trunclenf, trunclenr] }
             .join( ch_best_run_annotated )
 
         // Re-run AMPLISEQ_SIMPLIFIED with updated metadata (will use cached results but publish properly)
@@ -211,7 +206,6 @@ workflow AMPLISEQ_SCREENING {
         
         // Update the output channels to use the second run's outputs
         ch_best_tsv = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_table
-        //ch_best_fasta = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_fasta
     
     }
 

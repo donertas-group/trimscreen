@@ -19,6 +19,15 @@ workflow COMPARE_RUNS {
         .combine(runs_asv_table, by:0)
         .combine(runs_asv_tax, by:0)
 
+
+    def qualitybased_run_string = params.add_quality_based_trimming ? 
+        runs_summary
+            .filter { meta, file -> meta.run_type == 'quality_based' }
+            .map { meta, file -> meta.run }
+            .first()
+            .ifEmpty('') :
+        Channel.value('')
+
     if (params.metadata) {
         ch_metadata = Channel.fromPath("${params.metadata}", checkIfExists: true)
     } else {
@@ -89,7 +98,7 @@ workflow COMPARE_RUNS {
         }
 
         ch_runs_to_rarefy = ch_run_data
-            .map { meta, stats, asv, tax -> [meta.runID, meta, asv] }
+            .map { meta, stats, asv, tax -> [meta.run, meta, asv] }
             .join ( ch_runs_filtered_valid )
             .map { run, meta, asv, depth -> [meta, asv, depth]}
 
@@ -116,11 +125,11 @@ workflow COMPARE_RUNS {
 
         rarefied_table = MERGE_RAREFIED_SAMPLERUN_SUMMARIES.out.csv
 
-        SCORE_BASED_OPTIMISATION (rarefied_table, ch_metadata)
+        SCORE_BASED_OPTIMISATION (rarefied_table, ch_metadata, qualitybased_run_string)
    
     } else {
 
-        SCORE_BASED_OPTIMISATION (full_table, ch_metadata)
+        SCORE_BASED_OPTIMISATION (full_table, ch_metadata, qualitybased_run_string)
 
     }
 

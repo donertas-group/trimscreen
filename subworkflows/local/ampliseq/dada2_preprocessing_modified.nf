@@ -70,8 +70,7 @@ workflow DADA2_PREPROCESSING {
                 def fw_formatted = String.format('%03d', fw[1] as Integer)
                 def rv_formatted = String.format('%03d', rv[1] as Integer)
                 def new_meta = meta + [
-                    run: "${meta.run}_${fw_formatted}${rv_formatted}",
-                    runID: "${meta.runID}_${fw_formatted}${rv_formatted}",
+                    run: "run_${fw_formatted}${rv_formatted}",
                     id: "${meta.sample}.run_${fw_formatted}${rv_formatted}",
                     trunclenf: fw[1],
                     trunclenr: rv[1]
@@ -127,7 +126,7 @@ workflow DADA2_PREPROCESSING {
         }
 
 /*    ch_dada2_filtntrim_results.success
-        .map { [ it[0].run, it ] }         // -> [runID, [meta, reads, logs, args]]
+        .map { [ it[0].run, it ] }         // -> [run, [meta, reads, logs, args]]
         .groupTuple()
         .map { run, group -> [group.size(), group] }
         .groupTuple()

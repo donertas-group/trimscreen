@@ -385,9 +385,9 @@ workflow AMPLISEQ_SIMPLIFIED {
     // Add truncation values as params for later screening
     ch_trimmed_reads
         .combine(ch_params)
-        .map { meta, reads, runID, trunclenf, trunclenr, is_best_run ->
-               def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${runID}", runID: runID, run: runID, 
-                                       trunclenf: trunclenf, trunclenr: trunclenr, is_best_run: is_best_run]
+        .map { meta, reads, run, trunclenf, trunclenr, run_type ->
+               def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${run}", run: run,
+                                       trunclenf: trunclenf, trunclenr: trunclenr, run_type: run_type]
                tuple(new_meta, reads)}
         .set{ ch_trimmed_w_meta }
 
@@ -408,7 +408,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     if (params.add_quality_based_trimming) {//&& should not run when rerunning with all samples
         ch_trimmed_reads
             .map { meta, reads -> 
-            def new_meta = meta + [ sample: meta.id, runID: "run_qualitybased", run: "run_qualitybased", is_best_run: false]
+            def new_meta = meta + [ sample: meta.id, run: "run_qualitybased", run_type: "quality_based"]
             tuple(new_meta, reads)}
             .set{ ch_trimmed_w_qparams }
 
@@ -941,7 +941,6 @@ workflow AMPLISEQ_SIMPLIFIED {
         //    PICRUST ( QIIME2_EXPORT.out.abs_fasta, QIIME2_EXPORT.out.abs_tsv, "QIIME2", "This Picrust2 analysis is based on filtered reads from QIIME2" )
        // } else {
         PICRUST ( ch_fasta, ch_dada2_asv, "DADA2", "This Picrust2 analysis is based on unfiltered reads from DADA2" ) 
-      //  ch_best = PICRUST.out.args
         ch_versions = ch_versions.mix(PICRUST.out.versions)
     } 
 
@@ -996,16 +995,6 @@ workflow AMPLISEQ_SIMPLIFIED {
 
 
 
-
-/*    //
-    // SUBWORKFLOW: Create link to best runs in the best_run folder
-    //
-
-    ch_best.combine(PHYLOSEQ_WORKFLOW.out.rds, by:0)
-        .collect().map { it[0] }
-        .set {ch_best} 
-    //ch_best = ch_tsv.collect().map { it[0] }
-*/  
 
 
 
