@@ -1,5 +1,5 @@
 process RAREFY_RUNS {
-    tag "rarefy $meta.runID"
+    tag "rarefy $meta.run"
     label "process_single"
 
     conda "conda-forge::python=3.12.0 biopython=1.81 numpy=1.26.3 pandas=1.1.5 scikit-bio=0.4.2"
@@ -7,7 +7,7 @@ process RAREFY_RUNS {
         'https://depot.galaxyproject.org/singularity/scikit-bio:0.4.2--np112py36_0' :
         'oras://community.wave.seqera.io/library/scikit-bio:0.6.3--60b3440d8dded0f7' }"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2",
+    publishDir "${params.outdir}/runs/${meta.run}/dada2",
         mode: params.publish_dir_mode,
         pattern: "*.tsv.gz"
 

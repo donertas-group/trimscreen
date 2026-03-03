@@ -9,25 +9,25 @@ process DADA2_DENOISING {
         'https://depot.galaxyproject.org/singularity/bioconductor-dada2:1.30.0--r43hf17093f_0' :
         'biocontainers/bioconductor-dada2:1.30.0--r43hf17093f_0' }"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/args",
+    publishDir "${params.outdir}/runs/${meta.run}/dada2/args",
         mode: params.publish_dir_mode,
         pattern: "*.args.txt",
         enabled: params.publish_all_runs
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/log",
+    publishDir "${params.outdir}/runs/${meta.run}/dada2/log",
         mode: params.publish_dir_mode,
         pattern: "*.log",
         enabled: params.publish_all_runs
 
-    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/args",
+    publishDir "${params.outdir}/best_run/${meta.run}/dada2/args",
         mode: params.publish_dir_mode,
         pattern: "*.args.txt",
-        enabled: "${meta.is_best_run}"
+        enabled: "${meta.run_type=='suggested'}"
 
-    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/log",
+    publishDir "${params.outdir}/best_run/${meta.run}/dada2/log",
         mode: params.publish_dir_mode,
         pattern: "*.log",
-        enabled: "${meta.is_best_run}"
+        enabled: "${meta.run_type=='suggested'}"
 
 
     input:

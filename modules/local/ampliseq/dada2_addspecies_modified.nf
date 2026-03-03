@@ -1,5 +1,5 @@
 process DADA2_ADDSPECIES {
-    tag "${taxtable},${database},$meta.run"
+    tag "${taxtable},${database},${meta.run}"
     label 'process_medium'
     label 'single_cpu'
 
@@ -8,25 +8,25 @@ process DADA2_ADDSPECIES {
         'https://depot.galaxyproject.org/singularity/bioconductor-dada2:1.30.0--r43hf17093f_0' :
         'biocontainers/bioconductor-dada2:1.30.0--r43hf17093f_0' }"
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2/args",
+    publishDir "${params.outdir}/runs/${meta.run}/dada2/args",
         mode: params.publish_dir_mode,
         pattern: "*.args.txt",
         enabled: params.publish_all_runs
 
-    publishDir "${params.outdir}/runs/${meta.runID}/dada2",
+    publishDir "${params.outdir}/runs/${meta.run}/dada2",
         mode: params.publish_dir_mode,
         pattern: "*.tsv.gz",
         enabled: params.publish_all_runs
 
-    publishDir "${params.outdir}/best_run/${meta.runID}/dada2/args",
+    publishDir "${params.outdir}/best_run/${meta.run}/dada2/args",
         mode: params.publish_dir_mode,
         pattern: "*.args.txt",
-        enabled: "${meta.is_best_run}"
+        enabled: "${meta.run_type=='suggested'}"
 
-    publishDir "${params.outdir}/best_run/${meta.runID}/dada2",
+    publishDir "${params.outdir}/best_run/${meta.run}/dada2",
         mode: params.publish_dir_mode,
         pattern: "*.tsv.gz",
-        enabled: "${meta.is_best_run}"
+        enabled: "${meta.run_type=='suggested'}"
 
     input:
     tuple val(meta), path(taxtable)

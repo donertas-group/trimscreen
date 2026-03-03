@@ -7,15 +7,15 @@ process SUMMARISE_RUN {
         'https://depot.galaxyproject.org/singularity/scikit-bio:0.4.2--np112py36_0' :
         'oras://community.wave.seqera.io/library/scikit-bio:0.6.3--60b3440d8dded0f7' }"
 
-    publishDir "${params.outdir}/runs/${meta.runID}",
+    publishDir "${params.outdir}/runs/${meta.run}",
         mode: "$params.publish_dir_mode",
         pattern: "*.csv",
         enabled: params.publish_all_runs
 
-    publishDir "${params.outdir}/best_run/${meta.runID}",
+    publishDir "${params.outdir}/best_run/${meta.run}",
         mode: "$params.publish_dir_mode",
         pattern: "*.csv",
-        enabled: "${meta.is_best_run}"
+        enabled: "${meta.run_type=='suggested'}"
 
 
     input:
