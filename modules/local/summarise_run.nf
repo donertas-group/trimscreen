@@ -7,12 +7,23 @@ process SUMMARISE_RUN {
         'https://depot.galaxyproject.org/singularity/scikit-bio:0.4.2--np112py36_0' :
         'oras://community.wave.seqera.io/library/scikit-bio:0.6.3--60b3440d8dded0f7' }"
 
+    publishDir "${params.outdir}/runs/${meta.runID}",
+        mode: "$params.publish_dir_mode",
+        pattern: "*.args.txt",
+        enabled: params.publish_all_runs
+
+    publishDir "${params.outdir}/best_run/${meta.runID}",
+        mode: "$params.publish_dir_mode",
+        pattern: "*.args.txt",
+        enabled: "${meta.is_best_run}"
+
+
     input:
     tuple val(meta), path(stats), path(asv), path(tax)
     each path(metadata)
 
     output:
-    tuple val(meta), path("${meta.run}.samplerun_summary.csv"), path("${meta.run}.run_summary.csv"), emit: csv
+    tuple val(meta), path("samplerun_summary.csv"), path("run_summary.csv"), emit: csv
     path "versions.yml"   , emit: versions
 
     when:
