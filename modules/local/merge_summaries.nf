@@ -8,7 +8,7 @@ process MERGE_SUMMARIES {
         'oras://community.wave.seqera.io/library/scikit-bio:0.6.3--60b3440d8dded0f7' }"
 
     input:
-    path stats
+    tuple val(meta), path(stats)
     val filename
 
     output:

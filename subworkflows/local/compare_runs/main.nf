@@ -29,8 +29,15 @@ workflow COMPARE_RUNS {
     
     ch_run_table = SUMMARISE_RUN.out.csv
     
-    MERGE_SAMPLERUN_SUMMARIES (ch_run_table.map { it[1] }.collect(), 'samplerun_summaries' ) 
-    MERGE_RUN_SUMMARIES (ch_run_table.map { it[2] }.collect(), 'run_summaries' ) 
+    MERGE_SAMPLERUN_SUMMARIES (
+        ch_run_table.map { meta, samplerun_csv, run_csv -> tuple(meta, samplerun_csv) }.collect(), 
+        'samplerun_summaries' 
+    ) 
+
+    MERGE_RUN_SUMMARIES (
+        ch_run_table.map { meta, samplerun_csv, run_csv -> tuple(meta, run_csv) }.collect(), 
+        'run_summaries' 
+    ) 
 
     full_table = MERGE_SAMPLERUN_SUMMARIES.out.csv
 
@@ -99,8 +106,13 @@ workflow COMPARE_RUNS {
         ch_rarefied_run_table = SUMMARISE_RAREFIED_RUN.out.csv
 
 
-        MERGE_RAREFIED_SAMPLERUN_SUMMARIES(ch_rarefied_run_table.map { it[1] }.collect(), 'samplerun_summaries.filtered.rarefied')
-        MERGE_RAREFIED_RUN_SUMMARIES(ch_rarefied_run_table.map { it[2] }.collect(), 'run_summaries.filtered.rarefied')
+        MERGE_RAREFIED_SAMPLERUN_SUMMARIES(
+            ch_rarefied_run_table.map { meta, samplerun_csv, run_csv -> tuple(meta, samplerun_csv) }.collect(), 
+            'samplerun_summaries.filtered.rarefied')
+
+        MERGE_RAREFIED_RUN_SUMMARIES(
+            ch_rarefied_run_table.map { meta, samplerun_csv, run_csv -> tuple(meta, run_csv) }.collect(), 
+            'run_summaries.filtered.rarefied')
 
         rarefied_table = MERGE_RAREFIED_SAMPLERUN_SUMMARIES.out.csv
 
