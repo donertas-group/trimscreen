@@ -17,8 +17,8 @@ LAMBDA = 0.5  # variance penalty weight
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Find the best run across samples")
     parser.add_argument("-i", "--input", required=True, help="sample summary table csv")
-    parser.add_argument("-m", "--metadata", required=False,
-                        help="Optional metadata tsv table (currently not used for filtering)")
+    parser.add_argument("-m", "--metadata", required=False)
+    parser.add_argument("-q", "--quality_based_run", required=False, help="For report writing.")
     parser.add_argument("--metrics", required=True, nargs="+",
                         help="Trimming-dependent metrics on which runs are evaluated and ranked")
     parser.add_argument("--metric_directions", nargs="+",
@@ -189,6 +189,8 @@ def main():
 
         f.write("\n")
 
+        if args.quality_based_run:
+            f.write(f"\nCompare quality-based trimming: {args.quality_based_run}\n\n")
 
 if __name__ == "__main__":
     sys.exit(main())

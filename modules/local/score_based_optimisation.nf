@@ -10,6 +10,7 @@ process SCORE_BASED_OPTIMISATION {
     input:
     path table
     path metadata
+    val run_id
 
     output:
     tuple stdout, path("report.txt"), emit: info          
@@ -18,8 +19,9 @@ process SCORE_BASED_OPTIMISATION {
     task.ext.when == null || task.ext.when
 
     script:
+    def qrun_param = run_id != '' ? "-q ${run_id}" : ""
     """
-    score_based_optimisation.py -i $table -m $metadata --metrics retained_reads_percent shannon_Genus --metric_directions + + --metric_weights 0.5 1
+    score_based_optimisation.py -i $table -m $metadata ${qrun_param} --metrics retained_reads_percent shannon_Genus --metric_directions + + --metric_weights 0.5 1
     """
 
 }
