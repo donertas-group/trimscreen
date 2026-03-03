@@ -8,7 +8,7 @@ process MERGE_SUMMARIES {
         'oras://community.wave.seqera.io/library/scikit-bio:0.6.3--60b3440d8dded0f7' }"
 
     input:
-    tuple val(meta), path(stats)
+    path(csv_files, stageAs: 'summary_?.csv')
     val filename
 
     output:
@@ -19,6 +19,6 @@ process MERGE_SUMMARIES {
 
     script:
     """
-    merge_summaries.py -i $stats -o ${filename}.csv
+    merge_summaries.py -i summary_*.csv -o ${filename}.csv
     """
 }
