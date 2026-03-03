@@ -512,18 +512,18 @@ workflow AMPLISEQ_SIMPLIFIED {
     ch_versions = ch_versions.mix(DADA2_MERGE.out.versions)
 
     //merge cutadapt_summary and dada_stats files. modified: write summary files separately by runs
-    if (false){//!params.skip_cutadapt) {
+    /*if (!params.skip_cutadapt) {
         MERGE_STATS_STD (
             CUTADAPT_WORKFLOW.out.summary, 
             DADA2_MERGE.out.dada2stats )//.map { meta, dada2stats -> tuple(meta, dada2stats) }) // dada2stats is modified to contain meta as well
 
         ch_stats = MERGE_STATS_STD.out.tsv // MERGE_STATS.out.tsv is modified to contain meta
         ch_versions = ch_versions.mix(MERGE_STATS_STD.out.versions)
-    } else {
+    } else {*/
         WRITE_SINGLE_STATS (DADA2_MERGE.out.dada2stats)
-        ch_stats = DADA2_MERGE.out.dada2stats //DADA2_MERGE.out.dada2stats//.map { meta, dada2stats -> tuple(meta, dada2stats) }
-    }
+        ch_stats = DADA2_MERGE.out.dada2stats //DADA2_MERGE.out.dada2stats.map { meta, dada2stats -> tuple(meta, dada2stats) }
 /*
+    }
     //
     // SUBWORKFLOW / MODULES : Taxonomic classification with DADA2, SINTAX and/or QIIME2
     //

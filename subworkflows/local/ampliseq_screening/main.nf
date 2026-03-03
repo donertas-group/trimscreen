@@ -14,7 +14,7 @@ if (params.metadata) {
     
     ch_metadata_samples = ch_metadata.filter { row -> row.condition == "sample" }
        // .map { it.sampleID }
-        .map { row -> [row.sampleID, row.is_replicate == true || row.is_replicate == 'true'] } 
+        .map { row -> [row.sampleID, row.replicated == true || row.replicated == 'true'] } 
 
 } else { 
     ch_metadata = Channel.empty() 
@@ -60,10 +60,10 @@ workflow AMPLISEQ_SCREENING {
     )
 
     ch_params = GENERATE_PARAMS.out.params_csv
-    .splitCsv(header: true, sep: ',')
-    .map { row -> 
-           def is_best_run = false // initiallise is_best_run to false
-           return tuple(row.runID, row.trunclenf, row.trunclenr, is_best_run) } 
+        .splitCsv(header: true, sep: ',')
+        .map { row -> 
+            def is_best_run = false // initiallise is_best_run to false
+            return tuple(row.runID, row.trunclenf, row.trunclenr, is_best_run) } 
 
     // Subset samples 
     ch_is_best_run = ch_params
@@ -77,7 +77,7 @@ workflow AMPLISEQ_SCREENING {
         ch_samplesheet_samples = ch_samplesheet
             .map { meta, read1, read2 -> [meta.id, [meta, read1, read2]] }
             .join (ch_metadata_samples)
-            .map { id, tuple, is_replicate -> [tuple, is_replicate] }            
+            .map { id, tuple, replicated -> [tuple, replicated] }            
     }
     else { ch_samplesheet_samples = ch_samplesheet.map { tuple -> [tuple, false] } 
     }
