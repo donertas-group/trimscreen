@@ -27,7 +27,6 @@ def clr_transform(df, pseudocount=1e-6):
     clr = log_df.subtract(gm, axis=1)
     return clr
 
-
 def calculate_beta_diversity(asv_table, metadata):
 
     samples = asv_table.columns.tolist()
@@ -36,8 +35,8 @@ def calculate_beta_diversity(asv_table, metadata):
     metadata = metadata.set_index("sampleID")
     metadata = metadata.loc[metadata.index.intersection(samples)]
 
-    if len(metadata) < 3:
-        return None  # too few samples
+    if len(metadata) < 2:
+        return None  # too few samples to compute any distances
 
     # Determine biological groups
     metadata["replicated"] = metadata["replicated"].astype(str).str.lower() == "true"
@@ -53,22 +52,11 @@ def calculate_beta_diversity(asv_table, metadata):
 
     n_samples = len(metadata)
     n_bio_groups = group_counts.shape[0]
-    n_replicated_samples = metadata["replicated"].sum()
+    n_replicated_samples = metadata["replicated_sampleID"].nunique()
 
-    # Require:
-    # - at least 2 biological groups
-    # - at least 1 group with >=2 replicates
-    valid_rep_groups = group_counts[group_counts >= 2]
-
-    if n_bio_groups < 2 or valid_rep_groups.shape[0] < 1:
-        return {
-            "n_samples": n_samples,
-            "n_replicated_samples": int(n_replicated_samples),
-            "n_biologically_different_samples": n_bio_groups,
-            "mean_within_replicate_dist": np.nan,
-            "mean_between_sample_dist": np.nan,
-            "between_within_ratio": np.nan,
-        }
+    # Conditions for each metric
+    has_within = (group_counts >= 2).any()
+    has_between = n_bio_groups >= 2
 
     # Subset ASV table
     asv_table = asv_table[metadata.index]
@@ -102,14 +90,15 @@ def calculate_beta_diversity(asv_table, metadata):
             else:
                 between.append(d)
 
-    mean_within = np.mean(within) if within else np.nan
-    mean_between = np.mean(between) if between else np.nan
+    # Compute metrics independently
+    mean_within = np.mean(within) if has_within and within else np.nan
+    mean_between = np.mean(between) if has_between and between else np.nan
 
-    ratio = (
-        mean_between / mean_within
-        if mean_within and mean_within > 0
-        else np.nan
-    )
+    # Ratio only if both exist
+    if has_within and has_between and mean_within > 0:
+        ratio = mean_between / mean_within
+    else:
+        ratio = np.nan
 
     return {
         "n_samples": n_samples,
@@ -119,6 +108,7 @@ def calculate_beta_diversity(asv_table, metadata):
         "mean_between_sample_dist": mean_between,
         "between_within_ratio": ratio,
     }
+
 
 
 # -----------------------------
