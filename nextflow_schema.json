@@ -449,6 +449,16 @@
                     "help_text": "When read sequences are trimmed, untrimmed read pairs are discarded routinely. Use this option to retain untrimmed read pairs. This is usually not recommended and is only of advantage for specific protocols that prevent sequencing PCR primers. ",
                     "fa_icon": "far fa-plus-square"
                 },
+                "cutadapt_fw_fixed_cut":{
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Number of bases removed from the beginning or end of forward read. If positive, the bases are removed from the beginning (5'). If negative, the bases are removed from the end (3'). Follows the cutadapt flag --cut/-u."
+                },      
+                "cutadapt_rv_fixed_cut":{
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Number of bases removed from the beginning or end of reverse read. If positive, the bases are removed from the beginning (5'). If negative, the bases are removed from the end (3'). Follows the cutadapt flag -U."
+                },      
                 "cutadapt_min_overlap": {
                     "type": "integer",
                     "default": 3,
