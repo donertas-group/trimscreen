@@ -147,6 +147,7 @@ workflow AMPLISEQ_SCREENING {
     ch_runs_summary = AMPLISEQ_SIMPLIFIED.out.runs_summary
     ch_runs_asv_table = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
     ch_runs_asv_tax = AMPLISEQ_SIMPLIFIED.out.runs_asv_tax
+    ch_run_qtrim = AMPLISEQ_SIMPLIFIED.out.run_qtrim
  
     //
     // SUBWORKFLOW: Compare runs 
@@ -155,7 +156,8 @@ workflow AMPLISEQ_SCREENING {
         COMPARE_RUNS ( 
             ch_runs_summary, 
             ch_runs_asv_table, 
-            ch_runs_asv_tax 
+            ch_runs_asv_tax, 
+            ch_run_qtrim
         )
 
         // Process comparison results to identify best run
@@ -171,7 +173,6 @@ workflow AMPLISEQ_SCREENING {
             .join( ch_best_run.map { run -> [run, "suggested"] }, by: 0)
             .map { run, meta, file, _ -> [meta, file] }
             .set { ch_best_tsv }
-
 
     } else {
         // If comparison is skipped, output all runs
