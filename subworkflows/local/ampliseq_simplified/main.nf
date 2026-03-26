@@ -178,6 +178,8 @@ if ( !(workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1)
 // This tracks tax tables produced during pipeline and each table will be used during phyloseq
 ch_tax_for_phyloseq = Channel.empty()
 
+// channel for reads under quality-based trimming
+ch_filt_reads_q = Channel.empty()
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
@@ -419,6 +421,7 @@ workflow AMPLISEQ_SIMPLIFIED {
             //trunclenr
             //trunclenr
         ).reads.set { ch_filt_reads_q }
+        
         ch_filt_reads = ch_filt_reads.mix(ch_filt_reads_q)
     }
 
@@ -1160,6 +1163,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     runs_asv_table =  DADA2_MERGE.out.asv
     runs_asv_tax   =  DADA2_TAXONOMY_WF.out.tax
     runs_asv_fasta =  ch_fasta 
+    run_qtrim  = ch_filt_reads_q
     multiqc_report =  ch_multiqc_report_list      // MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
     versions       =  ch_versions                 // channel: [ path(versions.yml) ]
 }
