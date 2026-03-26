@@ -162,7 +162,7 @@ def validateInputParameters() {
 
 //
     if( !params.skip_cutadapt ) {
-        if( !params.FW_primer || !params.RV_primer ) {
+        if( params.FW_primer == null || params.RV_primer == null ) {//if( !params.FW_primer || !params.RV_primer ) {
             log.error "Missing required parameters, --skip_cutadapt is false, --FW_primer <string> and --RV_primer <string> must be provided."
         }
     } else {
