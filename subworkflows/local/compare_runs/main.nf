@@ -13,21 +13,26 @@ workflow COMPARE_RUNS {
     runs_summary 
     runs_asv_table
     runs_asv_tax
-
+    run_qtrim
+ 
     main:
     ch_run_data = runs_summary
         .combine(runs_asv_table, by:0)
         .combine(runs_asv_tax, by:0)
 
+    def run_qtrim_string = run_qtrim
+        .ifEmpty([[run: ''], []])
+        .map { meta, file -> meta.run }
+        .first()
 
-    def qualitybased_run_string = params.add_quality_based_trimming ? 
+    /*def qualitybased_run_string = params.add_quality_based_trimming ? 
         runs_summary
             .filter { meta, file -> meta.run_type == 'quality_based' }
             .map { meta, file -> meta.run }
             .first()
             .ifEmpty('') :
         Channel.value('')
-
+*/
     if (params.metadata) {
         ch_metadata = Channel.fromPath("${params.metadata}", checkIfExists: true)
     } else {
@@ -125,11 +130,11 @@ workflow COMPARE_RUNS {
 
         rarefied_table = MERGE_RAREFIED_SAMPLERUN_SUMMARIES.out.csv
 
-        SCORE_BASED_OPTIMISATION (rarefied_table, ch_metadata, qualitybased_run_string)
+        SCORE_BASED_OPTIMISATION (rarefied_table, ch_metadata, run_qtrim_string)
    
     } else {
 
-        SCORE_BASED_OPTIMISATION (full_table, ch_metadata, qualitybased_run_string)
+        SCORE_BASED_OPTIMISATION (full_table, ch_metadata, run_qtrim_string)
 
     }
 
