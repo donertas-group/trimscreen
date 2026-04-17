@@ -200,7 +200,7 @@ include { MULTIQC                           } from '../../../modules/nf-core/mul
 //
 include { RENAME_RAW_DATA_FILES                      } from '../../../modules/local/ampliseq/rename_raw_data_files'
 //include { RENAME_RAW_DATA_FILES                      } from '../../../modules/local/ampliseq/rename_raw_data_files_modified'
-include { DADA2_ERR                                  } from '../../../modules/local/ampliseq/dada2_err'
+include { DADA2_ERR                                  } from '../../../modules/local/ampliseq/dada2_err_modified'
 include { NOVASEQ_ERR                                } from '../../../modules/local/ampliseq/novaseq_err'
 include { DADA2_DENOISING                            } from '../../../modules/local/ampliseq/dada2_denoising'
 include { DADA2_RMCHIMERA                            } from '../../../modules/local/ampliseq/dada2_rmchimera'
@@ -432,6 +432,8 @@ workflow AMPLISEQ_SIMPLIFIED {
     //
     //run error model
     DADA2_ERR ( ch_filt_reads )
+
+/* modify DADA2_ERR to handle errors
     ch_errormodel = DADA2_ERR.out.errormodel
     ch_versions = ch_versions.mix(DADA2_ERR.out.versions)
 
@@ -441,6 +443,92 @@ workflow AMPLISEQ_SIMPLIFIED {
         .set { ch_derep_errormodel }
 
     DADA2_DENOISING ( ch_derep_errormodel.dump(tag: 'into_denoising')  )
+*/
+
+// Filter out the failed error models BEFORE joining with reads
+    DADA2_ERR.out.errormodel
+        .branch { meta, rds ->
+            // Convert the rds path(s) to a list and check each one
+            def rdsList = rds instanceof List ? rds : [rds]
+            
+            // This R script returns 'failed' if ANY rds file contains NULL
+            def rdsCheckCmd = [
+                "Rscript", "-e", 
+                "results <- sapply(c('${rdsList.join("','")}'), function(f) is.null(readRDS(f))); cat(if(any(results)) 'failed' else 'passed')"
+            ]
+            def checkResult = rdsCheckCmd.execute().text.trim()
+            
+            passed: checkResult == "passed"
+            failed: checkResult == "failed"
+        }
+        .set { ch_err_branched }
+
+    // Log the failed runs
+    ch_err_branched.failed
+        .map { meta, rds -> meta.run }
+        .collect()
+        .subscribe { 
+            if (it) {
+                log.warn "The following runs failed DADA2_ERR and will be skipped: \n${it.join('\n')}" 
+            }
+        }
+
+    // IMPORTANT: Join only the PASSED error models
+    ch_filt_reads
+        .join( ch_err_branched.passed )
+        .set { ch_derep_errormodel }
+
+    // Now DADA2_DENOISING only receives valid matrices
+    DADA2_DENOISING ( ch_derep_errormodel )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* use new logic above instead
+
+
+    // Branch the error models: only keep those that aren't NULL/empty
+    DADA2_ERR.out.errormodel
+        .branch { meta, rds ->
+            // Use a small R snippet to check if the RDS contains NULL
+            def check = ["Rscript", "-e", "obj <- readRDS('${rds[0]}'); cat(if(is.null(obj)) 'failed' else 'passed')"].execute().text.trim()
+            passed: check == "passed"
+            failed: check == "failed"
+        }
+        .set { ch_err_branched }
+
+    // Log the failed error models
+    ch_err_branched.failed
+        .subscribe { meta, rds -> log.warn "Sample ${meta.run} failed Error Learning and will be dropped." }
+
+    // Join ONLY the passed error models with the reads
+    ch_filt_reads
+        .join( ch_err_branched.passed )
+        .set { ch_derep_errormodel }
+
+    DADA2_DENOISING ( ch_derep_errormodel )
+
+*/
+
+
+
+
+
+
+
+
     ch_versions = ch_versions.mix(DADA2_DENOISING.out.versions)
 
     DADA2_DENOISING.out.seqtab
@@ -464,7 +552,7 @@ workflow AMPLISEQ_SIMPLIFIED {
             log.warn "$samples yield(s) empty output files and will be ignored. \n"
         }
     
-    DADA2_DENOISING.out.denoised
+  /*  DADA2_DENOISING.out.denoised
     .join(DADA2_DENOISING.out.seqtab)
     .join(DADA2_DENOISING.out.mergers)
     .branch {  meta, denoised, seqtab, mergers ->
@@ -478,7 +566,7 @@ workflow AMPLISEQ_SIMPLIFIED {
                 return [meta, denoised, seqtab, mergers]
     }
     .set { ch_dada2_denoising }
- 
+ */
 
  //   DADA2_RMCHIMERA ( DADA2_DENOISING.out.seqtab )
 
