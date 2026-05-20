@@ -13,8 +13,13 @@ if (params.metadata) {
         .splitCsv(header: true)
     
     ch_metadata_samples = ch_metadata.filter { row -> row.condition == "sample" }
-       // .map { it.sampleID }
-        .map { row -> [row.sampleID, row.replicated == true || row.replicated == 'true'] } 
+        .map { row -> 
+            // Normalize the string: lowercase it and take the first character
+            def val = row.replicated?.toString()?.toLowerCase()?.trim()
+            def isReplicated = (val == 'true' || val == 't')
+            
+            return [row.sampleID, isReplicated]
+        }
 
 } else { 
     ch_metadata = Channel.empty() 
@@ -203,10 +208,10 @@ workflow AMPLISEQ_SCREENING {
             .join( ch_best_run_annotated )
 
         // Re-run AMPLISEQ_SIMPLIFIED with updated metadata (will use cached results but publish properly)
-        AMPLISEQ_SIMPLIFIED_RERUN(ch_samplesheet, ch_params_best)
+        //AMPLISEQ_SIMPLIFIED_RERUN(ch_samplesheet, ch_params_best)
         
         // Update the output channels to use the second run's outputs
-        ch_best_tsv = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_table
+        //ch_best_tsv = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_table
     
     }
 
