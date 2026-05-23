@@ -12,11 +12,14 @@ import logging
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(
-        description="Compare runs and compute per-sample and per-run summaries including beta diversity."
-    )
+        description="Compare runs and compute per-sample and per-run summaries including beta diversity.")
+
     parser.add_argument("-i", "--input", nargs=4, required=True,
                         help="summary_file asv_file tax_file run_name")
-    parser.add_argument("-m", "--metadata", required=False, help="Metadata CSV with columns: sampleID, replicated, replicated_sampleID")
+
+    parser.add_argument("-m", "--metadata", required=False, 
+                        help="Metadata CSV with columns: sampleID, replicated, bio_sample")
+
     return parser.parse_args()
 
 
@@ -43,7 +46,7 @@ def calculate_beta_diversity(asv_table, metadata):
 
     metadata["bio_group"] = np.where(
         metadata["replicated"],
-        metadata["replicated_sampleID"],
+        metadata["bio_sample"],
         metadata.index
     )
 
@@ -52,7 +55,7 @@ def calculate_beta_diversity(asv_table, metadata):
 
     n_samples = len(metadata)
     n_bio_groups = group_counts.shape[0]
-    n_replicated_samples = metadata["replicated_sampleID"].nunique()
+    n_bio_samples = metadata["bio_sample"].nunique()
 
     # Conditions for each metric
     has_within = (group_counts >= 2).any()
@@ -102,7 +105,7 @@ def calculate_beta_diversity(asv_table, metadata):
 
     return {
         "n_samples": n_samples,
-        "n_replicated_samples": int(n_replicated_samples),
+        "n_bio_samples": int(n_bio_samples),
         "n_biologically_different_samples": n_bio_groups,
         "mean_within_replicate_dist": mean_within,
         "mean_between_sample_dist": mean_between,
