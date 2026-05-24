@@ -26,6 +26,24 @@ if (params.metadata) {
     ch_metadata_samples = Channel.empty()
 }
 
+if ( params.skip_trim_screening){ 
+    if (params.trunclenf_range && params.trunclenr_range) {
+    log.warn "`skip_trim_screening` is set to true. `trunclenf_range` and `trunclenr_range` will be ignored." 
+}
+}
+if ( params.skip_trim_screening){ 
+    if ( params.trunclenf && params.trunclenr){ 
+        log.warn "`skip_trim_screening` is set to true, trimming will be performed as set by `trunclenf = ${params.trunclenf}` and `trunclenr = ${params.trunclenr}`."
+    }
+	else if (!params.skip_dada_quality) {
+        log.warn "`skip_trim_screening` is set to true and `skip_dada_quality` is set to false. DADA2 quality rimming will be performed."
+    }
+    else {
+        log.warn "Both `skip_trim_screening` and `skip_dada_quality` are set to true. No rear-end read trimming will be performed." 
+    } 
+}
+
+ch_params = Channel.empty()
 
 workflow AMPLISEQ_SCREENING {
     take:
@@ -52,6 +70,13 @@ workflow AMPLISEQ_SCREENING {
     ch_read_length.subscribe { read_len ->
         log.info "Read length extracted from samplesheet: ${read_len}"
     }
+
+//
+// Do trimscreening
+//
+
+    if (!params.skip_trim_screening) {
+
 
     GENERATE_PARAMS (
         params.marker_size_min, 
@@ -148,6 +173,34 @@ workflow AMPLISEQ_SCREENING {
 
     // Run simplified version of ampliseq
     AMPLISEQ_SIMPLIFIED(ch_samplesheet_subset, ch_params)
+
+}
+
+
+//
+// Trimscreening is skipped
+//
+
+    else if ( params.trunclenf && params.trunclenr){
+        AMPLISEQ_SIMPLIFIED(ch_samplesheet, ch_params) // ch_params set by params.trunclenf && params.trunclenr
+    }
+    else if (!params.skip_dada_quality) {
+        AMPLISEQ_SIMPLIFIED(ch_samplesheet, ch_params) // ch_params set by dada default quality trimming
+    }
+    else {
+
+        def run       = "no_trimming"
+        def trunclenf = 0
+        def trunclenr = 0
+        def run_type  = "no_trimming"
+        
+        ch_params = Channel.of(tuple(run, trunclenf, trunclenr, run_type))
+
+        AMPLISEQ_SIMPLIFIED(ch_samplesheet, ch_params) // ch_params has no trimming, just up- and downstream steps
+    }
+
+
+
 
     ch_runs_summary = AMPLISEQ_SIMPLIFIED.out.runs_summary
     ch_runs_asv_table = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
