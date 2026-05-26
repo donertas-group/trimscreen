@@ -320,9 +320,9 @@ workflow AMPLISEQ_SIMPLIFIED {
     ch_input_reads
         .map{ info, reads ->
             def meta = info +
+                [sample: info.id] +
                 [region: null, region_length: null] +
                 [fw_primer: params.FW_primer, rv_primer: params.RV_primer] +
-                //[id: info.id] +
                 [fw_primer_revcomp: params.FW_primer ? makeComplement(params.FW_primer.reverse()) : null] +
                 [rv_primer_revcomp: params.RV_primer ? makeComplement(params.RV_primer.reverse()) : null]
             return [ meta, reads ] }
@@ -388,11 +388,10 @@ workflow AMPLISEQ_SIMPLIFIED {
     ch_trimmed_reads
         .combine(ch_params)
         .map { meta, reads, run, trunclenf, trunclenr, run_type ->
-               def new_meta = meta + [ sample: meta.id, id: "${meta.id}.${run}", run: run,
+               def new_meta = meta + [ id: "${meta.sample}.${run}", run: run, //sample: meta.id
                                        trunclenf: trunclenf, trunclenr: trunclenr, run_type: run_type]
                tuple(new_meta, reads)}
         .set{ ch_trimmed_w_meta }
-
     //
     // SUBWORKFLOW: Read preprocessing & QC plotting with DADA2
     //
@@ -410,7 +409,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     if (params.add_quality_based_trimming) {//&& should not run when rerunning with all samples
         ch_trimmed_reads
             .map { meta, reads -> 
-            def new_meta = meta + [ sample: meta.id, run: "run_qualitybased", run_type: "quality_based"]
+            def new_meta = meta + [ run: "run_qualitybased", run_type: "quality_based"]//sample: meta.id
             tuple(new_meta, reads)}
             .set{ ch_trimmed_w_qparams }
 
@@ -480,17 +479,6 @@ workflow AMPLISEQ_SIMPLIFIED {
 
     // Now DADA2_DENOISING only receives valid matrices
     DADA2_DENOISING ( ch_derep_errormodel )
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -725,12 +713,16 @@ workflow AMPLISEQ_SIMPLIFIED {
     // Modules : amplicon length filtering
     //
     if ( (params.min_len_asv || params.max_len_asv)){// && !params.multiregion ) {
+
         FILTER_LEN_ASV ( ch_dada2_fasta.combine(ch_dada2_asv.ifEmpty( [] ),by:0 )) // combine the two channels as they both contain meta now
         ch_versions = ch_versions.mix(FILTER_LEN_ASV.out.versions)
+
         MERGE_STATS_FILTERLENASV ( ch_stats, FILTER_LEN_ASV.out.stats )
+
         ch_stats = MERGE_STATS_FILTERLENASV.out.tsv
         ch_dada2_fasta = FILTER_LEN_ASV.out.fasta
         ch_dada2_asv = FILTER_LEN_ASV.out.asv
+
         // Make sure that not all sequences were removed. Modified: report by run
        //ch_dada2_fasta.subscribe { if (it.countLines() == 0) error("ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs, please adjust settings.") }
        /* ch_dada2_fasta.subscribe { 
