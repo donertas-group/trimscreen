@@ -1,9 +1,9 @@
 include { AMPLISEQ_SIMPLIFIED                                       } from '../ampliseq_simplified/main'
 include { AMPLISEQ_SIMPLIFIED as AMPLISEQ_SIMPLIFIED_RERUN } from '../ampliseq_simplified/main'
 include { GENERATE_PARAMS                                           } from '../../../modules/local/generate_params'
+include { SUMMARISE_RUNS                } from '../../../subworkflows/local/summarise_runs/main'
 include { COMPARE_RUNS                  } from '../../../subworkflows/local/compare_runs/main'
 include { CREATE_LINK                   } from '../../../modules/local/create_link'
-
 
 // Input
 if (params.metadata) {
@@ -200,26 +200,45 @@ workflow AMPLISEQ_SCREENING {
     }
 
 
-
-
-    ch_runs_summary = AMPLISEQ_SIMPLIFIED.out.runs_summary
+    ch_runs_summary   = AMPLISEQ_SIMPLIFIED.out.runs_summary
     ch_runs_asv_table = AMPLISEQ_SIMPLIFIED.out.runs_asv_table
-    ch_runs_asv_tax = AMPLISEQ_SIMPLIFIED.out.runs_asv_tax
-    ch_run_qtrim = AMPLISEQ_SIMPLIFIED.out.run_qtrim
+    ch_runs_asv_tax   = AMPLISEQ_SIMPLIFIED.out.runs_asv_tax
+    ch_run_qtrim      = AMPLISEQ_SIMPLIFIED.out.run_qtrim
  
-    //
-    // SUBWORKFLOW: Compare runs 
-    //
+    // Prepare structures that SUMMARISE needs regardless of whether we skip comparison
+    ch_run_data = ch_runs_summary
+        .combine(ch_runs_asv_table, by:0)
+        .combine(ch_runs_asv_tax, by:0)
+
+    if (params.metadata) {
+        ch_metadata = Channel.fromPath("${params.metadata}", checkIfExists: true)
+    } else {
+        ch_metadata = Channel.value(file('NO_FILE'))
+    }
+
+    // 1. ALWAYS SUMMARIZE BY DEFAULT
+    SUMMARISE_RUNS(ch_run_data, ch_metadata)
+    def full_table = SUMMARISE_RUNS.out.full_table
+
+    // 2. CONDITIONALLY RUN COMPARISONS
     if (!params.skip_run_comparison) {
+        
+        def run_qtrim_string = ch_run_qtrim
+            .ifEmpty([[run: ''], []])
+            .map { meta, file -> meta.run }
+            .first()
+
         COMPARE_RUNS ( 
-            ch_runs_summary, 
-            ch_runs_asv_table, 
-            ch_runs_asv_tax, 
-            ch_run_qtrim
+            full_table,
+            ch_run_data,
+            ch_runs_summary,
+            ch_runs_asv_tax,
+            run_qtrim_string,
+            ch_metadata
         )
 
         // Process comparison results to identify best run
-        COMPARE_RUNS.out
+        COMPARE_RUNS.out.best_runs
             .map{ stdout, report -> stdout }
             .splitJson()
             .flatten()
@@ -233,12 +252,10 @@ workflow AMPLISEQ_SCREENING {
             .set { ch_best_tsv }
 
     } else {
-        // If comparison is skipped, output all runs
+        // If comparison is skipped, output all runs or default channels empty
         ch_best_tsv = ch_runs_asv_table
         ch_best_run = Channel.empty()
     }
-
-
     //
     //
     //
@@ -267,8 +284,6 @@ workflow AMPLISEQ_SCREENING {
         //ch_best_tsv = AMPLISEQ_SIMPLIFIED_RERUN.out.runs_asv_table
     
     }
-
-
 
     emit:
     best_run         = ch_best_run
