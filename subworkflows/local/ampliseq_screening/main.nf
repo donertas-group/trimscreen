@@ -11,7 +11,15 @@ if (params.metadata) {
     ch_metadata = Channel
         .fromPath(params.metadata, checkIfExists: true)
         .splitCsv(header: true)
-    
+        .map { row -> // Validation step using .map
+            def required_columns = ['sampleID', 'condition', 'replicated']
+            def missing_columns = required_columns.findAll { !row.containsKey(it) }
+            
+            if (missing_columns) {
+                error "ERROR: The metadata file is missing mandatory column(s): ${missing_columns.join(', ')}. Please check your input."
+            }
+            return row
+        }
     ch_metadata_samples = ch_metadata.filter { row -> row.condition == "sample" }
         .map { row -> 
             // Normalize the string: lowercase it and take the first character
