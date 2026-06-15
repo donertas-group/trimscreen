@@ -106,7 +106,7 @@ def calculate_beta_diversity(asv_table, metadata):
     return {
         "n_samples": n_samples,
         "n_bio_samples": int(n_bio_samples),
-        "n_biologically_different_samples": n_bio_groups,
+        #"n_biologically_different_samples": n_bio_groups,
         "mean_within_replicate_dist": mean_within,
         "mean_between_sample_dist": mean_between,
         "between_within_ratio": ratio,
