@@ -28,8 +28,7 @@ def main():
 
     # Concatenate all DataFrames
     merged_df = pd.concat(dfs, ignore_index=True)
-
-	merged_df.drop_duplicates(inplace=True)
+    merged_df.drop_duplicates(inplace=True)
   
     # Save to a new CSV file
     merged_df.to_csv(args.output, index=False)
