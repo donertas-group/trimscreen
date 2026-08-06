@@ -5,10 +5,9 @@ import numpy as np
 import sys
 import argparse
 import json
-from typing import List, Tuple, Dict
+from typing import List
 
 def parse_args(args=None):
-
     parser = argparse.ArgumentParser(description="Filter runs and output table.")
     parser.add_argument("-i", "--input", required=True, help="Input table")
     parser.add_argument("-o", "--output", required=True, help="Output table")
@@ -24,20 +23,10 @@ def find_good_runs(
 ) -> List[str]:
     """
     Return runs where:
-      1) Every row has nreads > min_reads
-      2) For each sample, retained_reads_percent is at least
-         lowest_relative_retention * max(retained_reads_percent) across runs
-      3) No samples are filtered out within a run (strict run-level filter)
-
-    Args:
-      df: DataFrame with at least ['run', 'sample', 'nreads', 'retained_reads_percent']
-      min_reads: minimum reads per sample
-      lowest_relative_retention: fraction of max retained_reads_percent per sample
-
-    Returns:
-      List of run names that pass all criteria
+      1) Every row (sample) within the run has nreads > min_reads
+      2) The median retained_reads_percent of the run is at least
+         lowest_relative_retention * max(median retained_reads_percent across all runs)
     """
-
     # Ensure numeric columns
     df = df.copy()
     df['nreads'] = pd.to_numeric(df['nreads'], errors='coerce')
@@ -45,55 +34,34 @@ def find_good_runs(
         df['retained_reads_percent'], errors='coerce'
     )
 
-    # -----------------------------
-    # Step 1: filter by min_reads
-    # -----------------------------
-    filtered = df[df['nreads'] > min_reads]
+    # -------------------------------------------------------------
+    # Step 1: Find runs where ANY sample fails the absolute min_reads
+    # -------------------------------------------------------------
+    # If a single sample in a run is below min_reads, invalidate the whole run
+    runs_failing_reads = df[df['nreads'] <= min_reads]['run'].unique()
+    
+    # -------------------------------------------------------------
+    # Step 2: Evaluate run-level median retention
+    # -------------------------------------------------------------
+    # Calculate the median retention *per run*
+    run_medians = df.groupby('run')['retained_reads_percent'].median()
+    
+    # Find the maximum run median across the entire dataset
+    max_run_median = run_medians.max()
+    
+    # Determine the passing threshold
+    threshold = lowest_relative_retention * max_run_median
+    
+    # Get runs that meet or exceed this median threshold
+    runs_passing_retention = run_medians[run_medians >= threshold].index.tolist()
 
-    # -----------------------------
-    # Step 2: relative retention per sample
-    # -----------------------------
-    max_retention_per_sample = (
-        filtered
-        .groupby('sample')['retained_reads_percent']
-        .max()
-        .rename('max_retention')
-    )
-
-    filtered = filtered.merge(
-        max_retention_per_sample,
-        on='sample',
-        how='left',
-        validate='m:1'
-    )
-
-    filtered = filtered[
-        filtered['retained_reads_percent']
-        >= lowest_relative_retention * filtered['max_retention']
-    ]
-
-    # -----------------------------
-    # Step 3: strict run-level filter
-    # -----------------------------
-    # Original sample counts per run
-    original_counts = (
-        df
-        .groupby('run')['sample']
-        .nunique()
-    )
-
-    # Remaining sample counts per run after filtering
-    remaining_counts = (
-        filtered
-        .groupby('run')['sample']
-        .nunique()
-    )
-
-    # Keep runs where no samples were lost
+    # -------------------------------------------------------------
+    # Step 3: Combine criteria
+    # -------------------------------------------------------------
+    # Keep runs that pass retention AND do not contain any low-read samples
     good_runs = [
-        run
-        for run, n_samples in original_counts.items()
-        if remaining_counts.get(run, 0) == n_samples
+        run for run in runs_passing_retention 
+        if run not in runs_failing_reads
     ]
 
     return good_runs
@@ -101,10 +69,8 @@ def find_good_runs(
 def main():
     args = parse_args()
 
-    file = args.input
-    full_table = pd.read_csv(file)
+    full_table = pd.read_csv(args.input)
 
-    # find good runs by evaluating the per-sample median and sd of choosen columns
     good_runs = find_good_runs(
         full_table,
         min_reads=int(args.min_reads),
@@ -113,16 +79,20 @@ def main():
 
     filtered_table = full_table[full_table['run'].isin(good_runs)]
 
-    # get rarefaction depth
+    if filtered_table.empty:
+        print(json.dumps([]))
+        # Optional: write an empty dataframe or handle gracefully
+        filtered_table.to_csv(args.output, index=False)
+        return 0
+
+    # Get rarefaction depth based ONLY on the selected good runs
     D = filtered_table['nreads'].min()
 
-    # output as [runID, depth] as stdout for nf process
+    # Output as [runID, depth] as stdout for nextflow/snakemake process
     out = [[run, int(D)] for run in good_runs]
     print(json.dumps(out))
     
     filtered_table.to_csv(args.output, index=False)
 
-
 if __name__ == "__main__":
     sys.exit(main())
-
