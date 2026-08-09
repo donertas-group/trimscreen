@@ -116,7 +116,12 @@ workflow AMPLISEQ_SCREENING {
             .map { meta, read1, read2 -> [meta.id, [meta, read1, read2]] }
             .join (ch_metadata_samples)
             .map { id, tuple, replicated -> [tuple, replicated] }            
-    
+
+    // Check if the joined channel is empty
+        ch_samplesheet_samples
+            .ifEmpty { error "ERROR: No overlapping sample IDs found between samplesheet and metadata! Please verify 'sampleID' values in both files." }
+            .set { ch_samplesheet_samples }    
+
     } else {     
         ch_samplesheet_samples = ch_samplesheet.map { tuple -> [tuple, false] } 
     }
