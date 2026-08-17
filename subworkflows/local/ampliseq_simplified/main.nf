@@ -560,7 +560,9 @@ workflow AMPLISEQ_SIMPLIFIED {
 
     //group by sequencing run & group by meta
     DADA2_RMCHIMERA ( ch_denoised_seqtab.passed )
+
     DADA2_PREPROCESSING.out.logs
+        .mix( DADA2_PREPROCESSING_Q.out.logs )
         .join( DADA2_DENOISING.out.denoised )
         .join( DADA2_DENOISING.out.mergers )
         .join( DADA2_RMCHIMERA.out.rds )
