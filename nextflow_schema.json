@@ -373,7 +373,12 @@
                     "type": "boolean",
                     "default": true,
                     "description": "If suggestion is based on comparing runs where each sample-run is rarefied to the lowest read number per sample among the filtered runs."
-              }
+              },
+                "min_reads": {
+                    "type": "integer",
+                    "default": 2000,
+                    "description": "Minimum read counts to keep a sample. Used in filter_runs step."}
+
              }},
         "sequencing_input": {
             "title": "Sequencing input",
