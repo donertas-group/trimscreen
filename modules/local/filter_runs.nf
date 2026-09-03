@@ -10,8 +10,19 @@ process FILTER_RUNS {
     input:
     path table
     val suffix
+    val min_reads
+    val expected_samples   // comma-separated String of all expected sample names
 
     output:
+    // stdout now carries three JSON lines:
+    //   line 1: [[runID, depth], ...]   (good runs, as before)
+    //   line 2: [sample, ...]           (samples that never clear min_reads
+    //                                    in any run - empty list if none;
+    //                                    error-level, stops the pipeline)
+    //   line 3: [sample, ...]           (samples missing from the table
+    //                                    entirely, e.g. dropped upstream by
+    //                                    ASV length filtering - empty list
+    //                                    if none; warning-level only)
     tuple stdout, path("samplerun_summaries${suffix}.csv"), emit: filtered
 
     when:
@@ -19,6 +30,7 @@ process FILTER_RUNS {
 
     script:
     """
-    filter_runs.py -i $table -o samplerun_summaries${suffix}.csv
+    filter_runs.py -i $table -o samplerun_summaries${suffix}.csv -n $min_reads -s "$expected_samples"
     """
 }
+

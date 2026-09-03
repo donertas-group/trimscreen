@@ -247,7 +247,8 @@ workflow AMPLISEQ_SCREENING {
             ch_runs_summary,
             ch_runs_asv_tax,
             run_qtrim_string,
-            ch_metadata
+            ch_metadata,
+            ch_samplesheet
         )
 
         // Process comparison results to identify best run
