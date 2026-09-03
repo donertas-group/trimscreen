@@ -468,7 +468,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         .collect()
         .subscribe { 
             if (it) {
-                log.warn "The following runs failed DADA2_ERR and will be skipped: \n${it.join('\n')}" 
+                log.warn "[DADA2_ERR] The following runs failed and will be skipped: \n${it.join('\n')}" 
             }
         }
 
@@ -537,7 +537,7 @@ workflow AMPLISEQ_SIMPLIFIED {
         .collect()
         .subscribe {
             samples = it.join("\n")
-            log.warn "$samples yield(s) empty output files and will be ignored. \n"
+            log.warn "[DADA2_DENOISING] $samples yield(s) empty output files and will be ignored. \n"
         }
     
   /*  DADA2_DENOISING.out.denoised
@@ -735,7 +735,7 @@ workflow AMPLISEQ_SIMPLIFIED {
     
         ch_dada2_fasta = ch_dada2_fasta.filter { meta, file ->
             if (file.countLines() == 0) {
-                log.warn "ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs for ${meta.run}. This run is dropped. Please adjust settings."
+                log.warn "[FILTER_LEN_ASV] ASV length filtering activated by '--min_len_asv' or '--max_len_asv' removed all ASVs for ${meta.run}. This run is dropped. Please adjust settings."
                 return false   // drop this tuple
             }
             return true        // keep it

@@ -56,7 +56,7 @@ workflow COMPARE_RUNS {
                     def sample_str = missing_from_table_samples.size() == 1
                         ? "sample ${missing_from_table_samples[0]} is"
                         : "samples ${missing_from_table_samples[0..-2].join(', ')} and ${missing_from_table_samples[-1]} are"
-                    log.warn "${sample_str} missing from all the runs. Please check ASV length filtering parameters."
+                    log.warn "${sample_str} missing from all runs prior to run filtering. Please check settings of e.g. ASV length filtering parameters."
                 }
 
                 def count = good_runs.size()
