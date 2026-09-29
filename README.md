@@ -6,15 +6,16 @@
 **donertas-group/trimscreen** is a bioinformatics pipeline that systematically evaluate the influence of different trimming strategies on 16S amplicon sequencing data. This pipeline screens all possible combinations of forward and reverse read trimming lengths, ranging from no trimming to aggressive trimming that still ensures a minimum overlap between paired-end reads. By processing each combination through a standard bioinformatics workflow, the pipeline aims to identify the trimming lengths that maximize observed taxonomic richness. This approach provides a data-driven method to optimize preprocessing parameters and improve the accuracy and resolution of microbial community profiling.
 
 ## Download and usage
-Create a project directory and then download the `dev` branch 
+Create a project directory and then download the repository:
 
 ```bash
 mkdir <YOUR_DIR>
 cd <YOUR_DIR>
-git clone -b dev --single-branch https://github.com/donertas-group/trimscreen.git
+git clone https://github.com/donertas-group/trimscreen.git
 ```
 
-Preparing for input files:
+
+Preparing the input files:
 First, prepare a samplesheet with the *full path* of your input data file that looks as follows. There should only be `A`-`Z`, `0`-`9` and `_` in sample names.
 
 `samplesheet.csv` (the examples below assumes you have two samples `S10A`, `S10B` and a control `C01`):
@@ -25,17 +26,17 @@ S10A,/<full_path_to>/E10A_R1.fastq.gz,/<full_path_to>/E10A_R2.fastq.gz
 S10B,/<full_path_to>/E10B_R1.fastq.gz,/<full_path_to>/E10B_R2.fastq.gz
 C01,/<full_path_to>/control_R1.fastq.gz,/<full_path_to>/control_R2.fastq.gz
 ```
-Each row represents a pair of fastq files (paired end). Single-end is not enabled for this pipeline. Do not change the header line.
+Each row represents a pair of fastq files (paired end). Single-end is not enabled for this pipeline. Please use the exact header line `sampleID,forwardReads,reverseReads`.
 
-Then prepare a metadata sheet that looks as follows:
+Then prepare a metadata sheet `metadata.csv` with the following mandatory columns: `sampleID`, `condition`, `replicated`, and `bio_sample`. `replicated` is a boolean variable suggesting whether the sample has technical replicates. `bio_sample` is the name of the biological sample. Samples that are technical replicates share the same value in `bio_sample`.
 
-`metadata.csv`:
+Example of `metadata.csv`:
 
 ```csv
-sampleID,condition
-S10A,sample
-S10B,sample
-C01,control
+sampleID,condition,replicated,bio_sample
+S10A,sample,true,S10
+S10B,sample,true,S10
+C01,control,false,
 ```
 
 Lastly prepare a parameter file:
@@ -48,7 +49,6 @@ validation_blastn: true
 fasta_blastn: '/scratch/shire/data/nj/reference/genome/nothobranchius_furzeri/NfurGRZ-RIMD1/GCF_043380555.1_NfurGRZ-RIMD1_genomic.fna.gz'
 fasta_bbduk: '/scratch/shire/data/nj/reference/genome/nothobranchius_furzeri/NfurGRZ-RIMD1/GCF_043380555.1_NfurGRZ-RIMD1_genomic.fna.gz'
 
-dada_ref_taxonomy: "silva=138.2"
 FW_primer: 'CAATGGRSGVRASYCTGAHS'
 RV_primer: 'AGGGTATCTAATCCT'
 marker_size_min: 440
@@ -76,7 +76,6 @@ trunclenr_range: 246:2:250
 Now, you can run the pipeline using:
 
 ```bash
-git clone -b dev --single-branch https://github.com/donertas-group/trimscreen.git
 nextflow run trimscreen \
     -profile test,apptainer \
     --outdir <OUTDIR> \
