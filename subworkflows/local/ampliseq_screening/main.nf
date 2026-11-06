@@ -1,8 +1,8 @@
 include { AMPLISEQ_SIMPLIFIED                                       } from '../ampliseq_simplified/main'
-include { AMPLISEQ_SIMPLIFIED as AMPLISEQ_SIMPLIFIED_RERUN } from '../ampliseq_simplified/main'
+include { AMPLISEQ_SIMPLIFIED as AMPLISEQ_SIMPLIFIED_RERUN          } from '../ampliseq_simplified/main'
 include { GENERATE_PARAMS                                           } from '../../../modules/local/generate_params'
-include { COMPARE_RUNS                  } from '../../../subworkflows/local/compare_runs/main'
-include { CREATE_LINK                   } from '../../../modules/local/create_link'
+include { COMPARE_RUNS                                              } from '../../../subworkflows/local/compare_runs/main'
+include { CREATE_LINK                                               } from '../../../modules/local/create_link'
 
 
 // Input
@@ -32,6 +32,9 @@ workflow AMPLISEQ_SCREENING {
     ch_samplesheet
     
     main:
+
+    //def skip_comparison = params.skip_run_comparison || params.skip_trim_screening
+    
     // generate sets of parameters based on input ranges
     FW_primer_len = (params.FW_primer && !params.skip_cutadapt) ? params.FW_primer.size() : 0
     RV_primer_len = (params.RV_primer && !params.skip_cutadapt) ? params.RV_primer.size() : 0
@@ -61,13 +64,14 @@ workflow AMPLISEQ_SCREENING {
         FW_primer_len,
         RV_primer_len,
         trunclenf_range,
-        trunclenr_range 
+        trunclenr_range,
+        params.skip_trim_screening ?: false 
     )
 
     ch_params = GENERATE_PARAMS.out.params_csv
         .splitCsv(header: true, sep: ',')
         .map { row -> 
-            def run_type = "screened" // initiallise run_type to "screened"
+            def run_type = row.run_type ?: "screened" 
             return tuple(row.run, row.trunclenf, row.trunclenr, run_type) } 
 
     // Subset samples 

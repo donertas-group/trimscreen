@@ -10,23 +10,26 @@ process GENERATE_PARAMS {
       val RV_primer_len
       val trunclenf_range
       val trunclenr_range
-  
+      val skip_trim_screening
+
     output:
       path "summary_params_settings.csv", emit: params_csv
 
     script:
-    def trunclen_arg = (trunclenf_range != '' && 
+    def trunclen_arg = (trunclenf_range != '' &&
                        trunclenr_range != '') ?
                        "--trunclenf_range ${trunclenf_range} --trunclenr_range ${trunclenr_range}" : ""
+    def skip_arg = skip_trim_screening ? "--skip_trim_screening" : ""
     """
     set -euo pipefail
     set -C  # prevent overwriting files
 
-    generate_params.py --marker_size_min $marker_size_min \
-        --FW_primer_len $FW_primer_len --RV_primer_len $RV_primer_len \
-        --minimum_overlap $minimum_overlap \
-        --screen_interval $screen_interval \
-        ${trunclen_arg} \
+    generate_params.py --marker_size_min $marker_size_min \\
+        --FW_primer_len $FW_primer_len --RV_primer_len $RV_primer_len \\
+        --minimum_overlap $minimum_overlap \\
+        --screen_interval $screen_interval \\
+        ${trunclen_arg} \\
+        ${skip_arg} \\
         --read_length $read_length -o .
 
     # Check if file has meaningful content (more than just a newline)
@@ -38,4 +41,3 @@ process GENERATE_PARAMS {
     fi
     """
 }
-

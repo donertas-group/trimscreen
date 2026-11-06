@@ -50,6 +50,8 @@ def parse_args():
                         help="Format: 'min:interval:max', 'value1,value2', or 'value'.")
     parser.add_argument("--trunclenr_range", "-r", type=str,
                         help="Format: 'min:interval:max', 'value1,value2', or 'value'.")
+    parser.add_argument("--skip_trim_screening", action="store_true",
+                    help="Skip screening: write a single 'no_trimming' run (trunclenf=0, trunclenr=0).")
 
     return parser.parse_args()
 
@@ -70,7 +72,7 @@ def run_optional_algorithm(trunclenf_range, trunclenr_range, outdir):
     f_values = parse_range(trunclenf_range)
     r_values = parse_range(trunclenr_range)
     combinations = list(itertools.product(f_values, r_values))
-    run_data = [{"run": f"run_{f:03d}{r:03d}", "trunclenf": f, "trunclenr": r} for f, r in combinations]
+    run_data = [{"run": f"run_{f:03d}{r:03d}", "trunclenf": f, "trunclenr": r, "run_type": "screened"} for f, r in combinations]
 
     os.makedirs(outdir, exist_ok=True)
     output_path = os.path.join(outdir, "summary_params_settings.csv")
@@ -92,19 +94,39 @@ def run_mandatory_algorithm(args):
         if f + r >= total_min
     ]
 
-    run_data = [{"run": f"run_{f:03d}{r:03d}", "trunclenf": f, "trunclenr": r} for f, r in valid_combinations]
+    run_data = [{"run": f"run_{f:03d}{r:03d}", "trunclenf": f, "trunclenr": r, "run_type": "screened"} for f, r in valid_combinations]
 
     os.makedirs(args.outdir, exist_ok=True)
     output_path = os.path.join(args.outdir, "summary_params_settings.csv")
     pd.DataFrame(run_data).to_csv(output_path, index=False)
 
+def run_no_trimming(outdir):
+    os.makedirs(outdir, exist_ok=True)
+    output_path = os.path.join(outdir, "summary_params_settings.csv")
+    pd.DataFrame([{
+        "run": "run_no_trimming",
+        "trunclenf": 0,
+        "trunclenr": 0,
+        "run_type": "no_trimming",
+    }]).to_csv(output_path, index=False)
+
+
 def main():
     args = parse_args()
 
-    if args.trunclenf_range and args.trunclenr_range:
+    if args.skip_trim_screening:
+        run_no_trimming(args.outdir)
+    elif args.trunclenf_range and args.trunclenr_range:
         run_optional_algorithm(args.trunclenf_range, args.trunclenr_range, args.outdir)
     else:
         run_mandatory_algorithm(args)
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     sys.exit(main())
