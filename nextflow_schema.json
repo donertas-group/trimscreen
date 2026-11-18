@@ -367,7 +367,7 @@
                 "add_quality_based_trimming": {
                     "type": "boolean",
                     "default": false,
-                    "description": "If trimming based on only read base quality (default of ampliseq when trunclenf/r are not provided) should be included as one of the runs"
+                    "description": "Whether read quality based trimming should be included as one of the runs (default of ampliseq when trunclenf/r are not provided)."
                 },
                 "compare_rarefied_runs": {
                     "type": "boolean",
