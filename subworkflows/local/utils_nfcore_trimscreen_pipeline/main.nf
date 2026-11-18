@@ -155,35 +155,98 @@ workflow PIPELINE_COMPLETION {
 //
 def validateInputParameters() {
     genomeExistsError()
-//
+
+    def errors = []
+
+    //
+    // Samplesheet generation
+    //
     if (params.generate_downstream_samplesheets && !params.generate_pipeline_samplesheets) {
-        error('[nf-core/detaxizer] If supplying `--generate_downstream_samplesheets`, you must also specify which pipeline to generate for with `--generate_pipeline_samplesheets! Check input.')
+        errors << "[nf-core/detaxizer] If supplying `--generate_downstream_samplesheets`, you must also specify which pipeline to generate for with `--generate_pipeline_samplesheets`! Check input."
     }
 
-//
-    if( !params.skip_cutadapt ) {
-        if( params.FW_primer == null || params.RV_primer == null ) {//if( !params.FW_primer || !params.RV_primer ) {
-            log.error "Missing required parameters, --skip_cutadapt is false, --FW_primer <string> and --RV_primer <string> must be provided."
+    //
+    // Input
+    //
+    if (!params.input) {
+        errors << "Missing input declaration: `--input` is required."
+    }
+
+    //
+    // Cutadapt primers
+    //
+    if (!params.skip_cutadapt) {
+        if (params.FW_primer == null || params.RV_primer == null) {
+            errors << "Missing required parameters: --skip_cutadapt is false, so --FW_primer <string> and --RV_primer <string> must be provided."
         }
     } else {
-        if( params.FW_primer || params.RV_primer ) {
+        if (params.FW_primer || params.RV_primer) {
             log.warn "--skip_cutadapt is true, parameters --FW_primer and --RV_primer will be ignored."
         }
     }
 
-//
-    if ( !params.input ) {
-        error("Missing input declaration: `--input` is required.")
+    //
+    // Truncation lengths and trim screening
+    //
+    def hasTrunc = params.trunclenf != null && params.trunclenr != null
+    def hasRange = params.trunclenf_range != null && params.trunclenr_range != null
+
+    // Pairing: both or neither
+    if ((params.trunclenf == null) != (params.trunclenr == null)) {
+        errors << "Both --trunclenf and --trunclenr must be provided together, or neither."
+    }
+    if ((params.trunclenf_range == null) != (params.trunclenr_range == null)) {
+        errors << "Both --trunclenf_range and --trunclenr_range must be provided together, or neither."
     }
 
-//
-    if ( params.min_len_asv && params.max_len_asv && (params.min_len_asv > params.max_len_asv) ) {
-        error("Incompatible parameters: `--min_len_asv` may not be greater than `--max_len_asv`.")
+    // Both pairs cannot be set at the same time
+    if (hasTrunc && hasRange) {
+        errors << "--trunclenf/--trunclenr and --trunclenf_range/--trunclenr_range cannot be set at the same time."
     }
 
+    if (params.skip_trim_screening) {
+        // Run comparison requires screening
+        if (!params.skip_run_comparison) {
+            errors << "skip_run_comparison is required when skip_trim_screening"
+        }
 
+        // Need fixed lengths, or quality-based trimming only
+        def qualityOnly = params.add_quality_based_trimming && !params.skip_dada2_quality
+        if (!hasTrunc && !qualityOnly) {
+            errors << "--skip_trim_screening is set without --trunclenf/--trunclenr, and quality-based trimming only is not possible " +
+                      "(requires --add_quality_based_trimming and not --skip_dada2_quality). " +
+                      "Read truncation lengths are required. Use --trunclenf and --trunclenr, or --trunclenf_range and --trunclenr_range."
+        }
+        if (!hasTrunc && qualityOnly) {
+            log.warn "No truncation lengths given: only quality-based trimming will be run."
+        }
+        if (hasRange) {
+            log.warn "--trunclenf_range / --trunclenr_range are ignored because --skip_trim_screening is set."
+        }
+    } else {
+        // Screening active (default)
+        if (hasRange) {
+            log.warn "--trunclenf_range / --trunclenr_range were given and will be used for screening; " +
+                     "--minimum_overlap and --screen_interval will be overwritten."
+            // TODO: validate range format here
+        }
+        if (hasTrunc) {
+            log.warn "--trunclenf / --trunclenr are ignored because trim screening is active; " +
+                     "truncation lengths will come from screening."
+        }
+    }
+
+    //
+    // ASV length limits
+    //
+    if (params.min_len_asv && params.max_len_asv && (params.min_len_asv > params.max_len_asv)) {
+        errors << "Incompatible parameters: `--min_len_asv` may not be greater than `--max_len_asv`."
+    }
+
+    if (errors) {
+        error(errors.join("\n"))
+    }
 }
-
 //
 // Validate channels from input samplesheet
 //
